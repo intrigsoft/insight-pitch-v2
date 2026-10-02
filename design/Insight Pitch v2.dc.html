@@ -1,0 +1,784 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<title>Insight Pitch</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600;1,6..72,400&display=swap" rel="stylesheet">
+<style>body{margin:0;background:#f5f4ef;-webkit-font-smoothing:antialiased}a{color:#2e5e45}a:hover{color:#1f3d2e}input,textarea,select,button{font-family:inherit;font-size:inherit;color:inherit}::placeholder{color:#8f958f}@keyframes ipToast{from{opacity:0;transform:translate(-50%,8px)}to{opacity:1;transform:translate(-50%,0)}}@keyframes ipDrawer{from{transform:translateX(24px);opacity:0}to{transform:none;opacity:1}}</style>
+</helmet>
+<div style="min-height:100vh;background:#f5f4ef;color:#18201b;font-family:'Geist',system-ui,sans-serif;font-size:15px;line-height:1.5">
+
+<sc-if value="{{ isLogin }}" hint-placeholder-val="{{ true }}">
+<div data-screen-label="Login" style="min-height:100vh;display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,420px),1fr))">
+  <div style="background:#1f3d2e;color:#f1efe6;padding:48px 56px;display:flex;flex-direction:column;justify-content:space-between;gap:64px;min-height:320px">
+    <div style="display:flex;align-items:baseline;gap:6px;font-size:22px"><span style="font-family:'Newsreader',serif;font-style:italic;font-size:26px">Insight</span><span style="font-weight:600;letter-spacing:-0.01em">Pitch</span></div>
+    <div style="display:flex;flex-direction:column;gap:20px;max-width:520px">
+      <h1 style="margin:0;font-family:'Newsreader',serif;font-weight:400;font-size:56px;line-height:1.05;letter-spacing:-0.02em;text-wrap:balance">Better public decisions start as open proposals.</h1>
+      <p style="margin:0;font-size:17px;color:#c9d3cb;max-width:440px;text-wrap:pretty">Citizens and officials draft proposals, publish them for public discussion, and keep every version on the record.</p>
+    </div>
+    <div style="font-size:13px;color:#a9b8ad">© 2026 Insight Pitch</div>
+  </div>
+  <div style="display:flex;align-items:center;justify-content:center;padding:48px 24px;background:#f5f4ef">
+    <div style="width:100%;max-width:380px;display:flex;flex-direction:column;gap:22px">
+      <div style="display:flex;flex-direction:column;gap:6px">
+        <h2 style="margin:0;font-family:'Newsreader',serif;font-weight:500;font-size:34px;letter-spacing:-0.01em">Sign in</h2>
+        <p style="margin:0;color:#5d665f">Use your citizen or official account to continue.</p>
+      </div>
+      <label style="display:flex;flex-direction:column;gap:6px;font-size:13px;font-weight:500">Email
+        <input type="email" value="{{ email }}" onChange="{{ onEmail }}" style="height:44px;padding:0 14px;border:1px solid #d9d6cc;border-radius:10px;background:#fff;font-size:15px;font-weight:400;outline:none" style-focus="border-color:#2e5e45;box-shadow:0 0 0 3px #dbe7df">
+      </label>
+      <label style="display:flex;flex-direction:column;gap:6px;font-size:13px;font-weight:500">
+        <span style="display:flex;justify-content:space-between"><span>Password</span><a href="#" style="font-weight:400;text-decoration:none">Forgot?</a></span>
+        <input type="password" value="{{ password }}" onChange="{{ onPassword }}" onKeyDown="{{ onLoginKey }}" style="height:44px;padding:0 14px;border:1px solid #d9d6cc;border-radius:10px;background:#fff;font-size:15px;font-weight:400;outline:none" style-focus="border-color:#2e5e45;box-shadow:0 0 0 3px #dbe7df">
+      </label>
+      <sc-if value="{{ hasLoginError }}" hint-placeholder-val="{{ false }}"><div style="font-size:13px;color:#a3322a">{{ loginError }}</div></sc-if>
+      <button onClick="{{ onLogin }}" style="height:46px;border:none;border-radius:10px;background:#2e5e45;color:#fff;font-weight:600;cursor:pointer" style-hover="background:#234a36">Sign in</button>
+      <div style="display:flex;align-items:center;gap:12px;color:#8a918b;font-size:12px"><div style="flex:1;height:1px;background:#dedbd2"></div>or<div style="flex:1;height:1px;background:#dedbd2"></div></div>
+      <button onClick="{{ onLogin }}" style="height:46px;border:1px solid #d9d6cc;border-radius:10px;background:#fff;font-weight:500;cursor:pointer" style-hover="background:#fbfaf6">Continue with national ID</button>
+      <p style="margin:0;font-size:13px;color:#5d665f;text-align:center">New to Insight Pitch? <a href="#">Create an account</a></p>
+    </div>
+  </div>
+</div>
+</sc-if>
+
+<sc-if value="{{ isApp }}" hint-placeholder-val="{{ false }}">
+<header style="position:sticky;top:0;z-index:20;background:rgba(245,244,239,0.92);backdrop-filter:blur(10px);border-bottom:1px solid #e4e2da">
+  <div style="max-width:1200px;margin:0 auto;padding:0 24px;height:64px;display:flex;align-items:center;gap:24px">
+    <button onClick="{{ goList }}" style="display:flex;align-items:baseline;gap:5px;border:none;background:none;padding:0;cursor:pointer;color:#18201b;flex:none"><span style="font-family:'Newsreader',serif;font-style:italic;font-size:23px">Insight</span><span style="font-weight:600;font-size:19px;letter-spacing:-0.01em">Pitch</span></button>
+    <div style="flex:1;max-width:460px;position:relative;display:flex;align-items:center">
+      <span style="position:absolute;left:12px;color:#6b736d;display:flex"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"></circle><path d="m20 20-3.5-3.5"></path></svg></span>
+      <input value="{{ query }}" onChange="{{ onQuery }}" placeholder="Search proposals, people, streams" style="width:100%;height:40px;padding:0 14px 0 36px;border:1px solid #e0ddd4;border-radius:999px;background:#fff;outline:none;box-sizing:border-box" style-focus="border-color:#2e5e45;box-shadow:0 0 0 3px #dbe7df">
+    </div>
+    <div style="flex:1"></div>
+    <button onClick="{{ onNew }}" style="display:flex;align-items:center;gap:6px;height:38px;padding:0 16px;border:none;border-radius:999px;background:#2e5e45;color:#fff;font-weight:600;font-size:14px;cursor:pointer;flex:none" style-hover="background:#234a36"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14"></path></svg>New proposal</button>
+    <button onClick="{{ goSettings }}" title="Admin settings" style="width:38px;height:38px;border-radius:50%;border:1px solid #e0ddd4;background:{{ gearBg }};color:#3a423c;display:flex;align-items:center;justify-content:center;cursor:pointer;flex:none;padding:0" style-hover="background:#fff"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M4 7h9M17 7h3M4 12h3M11 12h9M4 17h11M19 17h1"></path><circle cx="15" cy="7" r="2"></circle><circle cx="9" cy="12" r="2"></circle><circle cx="17" cy="17" r="2"></circle></svg></button>
+    <div style="position:relative;flex:none">
+      <button onClick="{{ toggleMenu }}" style="width:38px;height:38px;border-radius:50%;border:none;background:#1f3d2e;color:#f1efe6;font-weight:600;font-size:13px;cursor:pointer">MC</button>
+      <sc-if value="{{ menuOpen }}" hint-placeholder-val="{{ false }}">
+        <div style="position:absolute;right:0;top:46px;width:230px;background:#fff;border:1px solid #e4e2da;border-radius:12px;box-shadow:0 12px 32px rgba(24,32,27,0.12);padding:6px;display:flex;flex-direction:column">
+          <div style="padding:10px 12px;border-bottom:1px solid #efede6;margin-bottom:4px"><div style="display:flex;align-items:center;gap:8px;font-weight:600">Maya Chen<span style="font-size:11px;font-weight:600;color:#234a36;background:#e2ebe4;padding:1px 7px;border-radius:999px">Admin</span></div><div style="font-size:13px;color:#5d665f">{{ email }}</div></div>
+          <button onClick="{{ goMine }}" style="text-align:left;padding:9px 12px;border:none;background:none;border-radius:8px;cursor:pointer" style-hover="background:#f3f2ec">My proposals</button>
+          <button onClick="{{ goSettings }}" style="text-align:left;padding:9px 12px;border:none;background:none;border-radius:8px;cursor:pointer" style-hover="background:#f3f2ec">Admin settings</button>
+          <button onClick="{{ onLogout }}" style="text-align:left;padding:9px 12px;border:none;background:none;border-radius:8px;cursor:pointer;color:#a3322a" style-hover="background:#f3f2ec">Sign out</button>
+        </div>
+      </sc-if>
+    </div>
+  </div>
+</header>
+</sc-if>
+
+<sc-if value="{{ isList }}" hint-placeholder-val="{{ false }}">
+<main data-screen-label="Proposals" style="max-width:1200px;margin:0 auto;padding:40px 24px 80px;display:flex;flex-wrap:wrap;gap:40px;align-items:flex-start">
+  <aside style="flex:0 0 210px;display:flex;flex-direction:column;gap:28px">
+    <div style="display:flex;flex-direction:column;gap:2px">
+      <div style="font-size:11px;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;color:#6b736d;padding:0 12px 8px">Library</div>
+      <sc-for list="{{ tabs }}" as="t" hint-placeholder-count="4">
+        <button onClick="{{ t.onClick }}" style="display:flex;justify-content:space-between;align-items:center;padding:9px 12px;border-radius:9px;border:1px solid {{ t.border }};background:{{ t.bg }};font-weight:{{ t.weight }};cursor:pointer;text-align:left"><span>{{ t.label }}</span><span style="font-size:12px;color:#6b736d;font-weight:500">{{ t.count }}</span></button>
+      </sc-for>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:2px">
+      <div style="font-size:11px;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;color:#6b736d;padding:0 12px 8px">Streams</div>
+      <sc-for list="{{ streamFilters }}" as="t" hint-placeholder-count="7">
+        <button onClick="{{ t.onClick }}" style="display:flex;align-items:center;gap:10px;padding:7px 12px;border-radius:9px;border:none;background:{{ t.bg }};font-weight:{{ t.weight }};cursor:pointer;text-align:left;font-size:14px" style-hover="background:#ecebe4"><span style="width:9px;height:9px;border-radius:50%;background:{{ t.color }};flex:none"></span><span style="flex:1">{{ t.name }}</span><span style="font-size:12px;color:#6b736d">{{ t.count }}</span></button>
+      </sc-for>
+    </div>
+  </aside>
+  <section style="flex:1 1 560px;min-width:0;display:flex;flex-direction:column;gap:20px">
+    <div style="display:flex;justify-content:space-between;align-items:flex-end;gap:16px;flex-wrap:wrap">
+      <div style="display:flex;flex-direction:column;gap:4px">
+        <h1 style="margin:0;font-family:'Newsreader',serif;font-weight:500;font-size:40px;line-height:1.1;letter-spacing:-0.02em">{{ listTitle }}</h1>
+        <div style="color:#5d665f;font-size:14px">{{ listSubtitle }}</div>
+      </div>
+      <label style="display:flex;align-items:center;gap:8px;font-size:13px;color:#5d665f">Sort
+        <select value="{{ sort }}" onChange="{{ onSort }}" style="height:34px;padding:0 10px;border:1px solid #e0ddd4;border-radius:8px;background:#fff;font-size:13px;cursor:pointer">
+          <option value="recent">Recently updated</option>
+          <option value="discussed">Most discussed</option>
+          <option value="score">{{ scoreSortLabel }}</option>
+        </select>
+      </label>
+    </div>
+    <sc-if value="{{ hasRows }}" hint-placeholder-val="{{ true }}">
+    <div style="display:grid;gap:1px;background:#e7e5dd;border:1px solid #e7e5dd;border-radius:14px;overflow:hidden">
+      <sc-for list="{{ rows }}" as="r" hint-placeholder-count="5">
+        <div onClick="{{ r.onOpen }}" style="background:#fff;padding:22px 26px;cursor:pointer;display:flex;flex-direction:column;gap:9px" style-hover="background:#fbfaf6">
+          <sc-if value="{{ r.hasBadge }}"><div style="display:flex;gap:8px;font-size:12px">
+            <sc-if value="{{ r.isDraft }}"><span style="padding:2px 8px;border-radius:999px;background:#f6ecd6;color:#7a5410;font-weight:600">Draft</span></sc-if>
+            <sc-if value="{{ r.hasPending }}"><span style="padding:2px 8px;border-radius:999px;background:#f6ecd6;color:#7a5410;font-weight:600">Unpublished changes</span></sc-if>
+          </div></sc-if>
+          <h2 style="margin:0;font-family:'Newsreader',serif;font-weight:500;font-size:23px;line-height:1.25;letter-spacing:-0.01em;text-wrap:pretty">{{ r.title }}</h2>
+          <sc-if value="{{ showSummary }}" hint-placeholder-val="{{ true }}"><p style="margin:0;color:#4f5751;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;text-wrap:pretty">{{ r.summary }}</p></sc-if>
+          <div style="display:flex;gap:6px;flex-wrap:wrap">
+            <sc-for list="{{ r.scores }}" as="sc"><span style="display:inline-flex;align-items:center;gap:6px;padding:3px 10px 3px 8px;border:1px solid #e4e2da;border-radius:999px;font-size:12px;font-weight:500;color:#3a423c"><span style="width:8px;height:8px;border-radius:50%;background:{{ sc.color }}"></span>{{ sc.name }}<sc-if value="{{ sc.showNum }}"><b style="color:#18201b">{{ sc.label }}</b></sc-if></span></sc-for>
+          </div>
+          <div style="display:flex;align-items:center;gap:10px;font-size:13px;color:#5d665f;margin-top:2px;flex-wrap:wrap">
+            <span style="width:24px;height:24px;border-radius:50%;background:#e2ebe4;color:#234a36;font-size:10px;font-weight:600;display:flex;align-items:center;justify-content:center">{{ r.initials }}</span>
+            <span style="color:#18201b;font-weight:500">{{ r.authorName }}</span>
+            <span>·</span><span>{{ r.updated }}</span>
+            <span>·</span><span>{{ r.versionLabel }}</span>
+            <span style="display:flex;align-items:center;gap:5px;margin-left:auto"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.6A8 8 0 1 1 21 12z"></path></svg>{{ r.commentCount }}</span>
+          </div>
+        </div>
+      </sc-for>
+    </div>
+    </sc-if>
+    <sc-if value="{{ noRows }}" hint-placeholder-val="{{ false }}">
+      <div style="border:1px dashed #d4d1c7;border-radius:14px;padding:56px 24px;text-align:center;display:flex;flex-direction:column;align-items:center;gap:12px">
+        <div style="font-family:'Newsreader',serif;font-size:24px">No proposals match</div>
+        <div style="color:#5d665f">Try a different search or clear your filters.</div>
+        <button onClick="{{ clearFilters }}" style="height:36px;padding:0 16px;border:1px solid #d9d6cc;border-radius:999px;background:#fff;cursor:pointer;font-weight:500">Clear filters</button>
+      </div>
+    </sc-if>
+  </section>
+</main>
+</sc-if>
+
+<sc-if value="{{ isView }}" hint-placeholder-val="{{ false }}">
+<main data-screen-label="Proposal" style="max-width:1200px;margin:0 auto;padding:28px 24px 96px;display:flex;flex-direction:column;gap:24px">
+  <button onClick="{{ goList }}" style="align-self:flex-start;display:flex;align-items:center;gap:6px;border:none;background:none;padding:4px 0;color:#5d665f;cursor:pointer;font-size:14px" style-hover="color:#18201b"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M11 18l-6-6 6-6"></path></svg>All proposals</button>
+  <div style="display:flex;flex-wrap:wrap;gap:56px;align-items:flex-start">
+    <article style="flex:1 1 560px;min-width:0;max-width:740px;display:flex;flex-direction:column;gap:22px">
+      <sc-if value="{{ v.isOld }}" hint-placeholder-val="{{ false }}">
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;padding:12px 16px;border-radius:10px;background:#eef1ea;border:1px solid #d7dfd5;font-size:14px">
+          <span>You're viewing <b>{{ v.shownLabel }}</b> from {{ v.shownDate }}. {{ v.shownNote }}.</span>
+          <button onClick="{{ v.onLatest }}" style="border:none;background:none;color:#2e5e45;font-weight:600;cursor:pointer;padding:0">View latest ({{ v.latestLabel }}) →</button>
+        </div>
+      </sc-if>
+      <sc-if value="{{ v.isDraftOnly }}" hint-placeholder-val="{{ false }}">
+        <div style="padding:12px 16px;border-radius:10px;background:#f6ecd6;color:#5e410c;font-size:14px">This proposal is a draft. Only you can see it until it's published.</div>
+      </sc-if>
+      <h1 style="margin:0;font-family:'Newsreader',serif;font-weight:500;font-size:46px;line-height:1.08;letter-spacing:-0.02em;text-wrap:balance">{{ v.title }}</h1>
+      <p style="margin:0;font-family:'Newsreader',serif;font-style:italic;font-size:21px;line-height:1.45;color:#4f5751;text-wrap:pretty">{{ v.summary }}</p>
+      <div style="display:flex;align-items:center;gap:12px;padding:14px 0;border-top:1px solid #e4e2da;border-bottom:1px solid #e4e2da">
+        <span style="width:38px;height:38px;border-radius:50%;background:#e2ebe4;color:#234a36;font-size:13px;font-weight:600;display:flex;align-items:center;justify-content:center;flex:none">{{ v.initials }}</span>
+        <div style="display:flex;flex-direction:column;line-height:1.3"><span style="font-weight:600">{{ v.authorName }}</span><span style="font-size:13px;color:#5d665f">{{ v.metaLine }}</span></div>
+      </div>
+
+      <div style="background:#fff;border:1px solid #e4e2da;border-radius:14px;padding:20px 22px;display:flex;flex-direction:column;gap:14px">
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap">
+          <div style="display:flex;flex-direction:column"><span style="font-size:11px;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;color:#6b736d">Stream scores</span><span style="font-size:13px;color:#5d665f">{{ v.scoreCaption }}</span></div>
+        </div>
+        <sc-if value="{{ v.notAdjusting }}" hint-placeholder-val="{{ true }}">
+          <div style="display:flex;flex-direction:column;gap:10px">
+            <sc-for list="{{ v.scoreRows }}" as="sr" hint-placeholder-count="3">
+              <div style="display:grid;grid-template-columns:minmax(110px,150px) minmax(0,1fr) 56px;gap:14px;align-items:center;font-size:14px">
+                <span style="display:flex;align-items:center;gap:8px;font-weight:500"><span style="width:9px;height:9px;border-radius:50%;background:{{ sr.color }};flex:none"></span>{{ sr.name }}</span>
+                <span style="height:8px;border-radius:999px;background:#ecebe4;overflow:hidden"><span style="display:block;height:100%;width:{{ sr.pct }};background:{{ sr.color }};border-radius:999px"></span></span>
+                <span style="text-align:right;font-variant-numeric:tabular-nums"><b>{{ sr.value }}</b><span style="color:#6b736d">{{ sr.suffix }}</span></span>
+              </div>
+            </sc-for>
+            <sc-if value="{{ v.hasUnscored }}"><div style="font-size:13px;color:#6b736d;padding-top:6px;border-top:1px solid #efede6">Not scored: {{ v.unscored }}</div></sc-if>
+          </div>
+        </sc-if>
+        <sc-if value="{{ v.isAdjusting }}">
+          <div style="display:flex;flex-direction:column;gap:14px">
+            <div style="display:flex;gap:6px;flex-wrap:wrap">
+              <sc-for list="{{ v.adjustItems }}" as="it"><button onClick="{{ it.onToggle }}" style="display:inline-flex;align-items:center;gap:6px;padding:5px 12px 5px 9px;border:1px solid {{ it.chipBorder }};background:{{ it.chipBg }};border-radius:999px;font-size:13px;font-weight:{{ it.chipWeight }};cursor:pointer"><span style="width:8px;height:8px;border-radius:50%;background:{{ it.color }}"></span>{{ it.name }}</button></sc-for>
+            </div>
+            <sc-for list="{{ v.adjustItems }}" as="it"><sc-if value="{{ it.on }}">
+              <div style="display:grid;grid-template-columns:minmax(110px,150px) minmax(0,1fr) 56px;gap:14px;align-items:center;font-size:14px">
+                <span style="display:flex;align-items:center;gap:8px;font-weight:500"><span style="width:9px;height:9px;border-radius:50%;background:{{ it.color }}"></span>{{ it.name }}</span>
+                <input type="range" min="1" max="10" step="1" value="{{ it.value }}" onChange="{{ it.onInput }}" style="width:100%;accent-color:#2e5e45">
+                <span style="text-align:right;font-weight:600;font-variant-numeric:tabular-nums">{{ it.label }}</span>
+              </div>
+            </sc-if></sc-for>
+          </div>
+        </sc-if>
+      </div>
+
+      <div style="display:flex;flex-direction:column;gap:18px;font-family:'Newsreader',serif;font-size:19px;line-height:1.65;color:#232a25">
+        <sc-for list="{{ v.paras }}" as="pa" hint-placeholder-count="4">
+          <sc-if value="{{ pa.isH }}"><h3 style="margin:14px 0 -6px;font-family:'Geist',sans-serif;font-size:13px;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;color:#2e5e45">{{ pa.text }}</h3></sc-if>
+          <sc-if value="{{ pa.isP }}"><p style="margin:0;text-wrap:pretty">{{ pa.text }}</p></sc-if>
+        </sc-for>
+      </div>
+
+      <section style="margin-top:36px;padding-top:28px;border-top:1px solid #e4e2da;display:flex;flex-direction:column;gap:22px">
+        <h2 style="margin:0;font-family:'Newsreader',serif;font-weight:500;font-size:28px">Discussion <span style="color:#6b736d;font-size:20px">{{ v.commentCount }}</span></h2>
+        <sc-if value="{{ v.isDraftOnly }}" hint-placeholder-val="{{ false }}">
+          <div style="color:#5d665f;font-size:14px">Comments open once the proposal is published.</div>
+        </sc-if>
+        <sc-if value="{{ v.canComment }}" hint-placeholder-val="{{ true }}">
+          <div style="display:flex;gap:12px;align-items:flex-start">
+            <span style="width:38px;height:38px;border-radius:50%;background:#1f3d2e;color:#f1efe6;font-size:13px;font-weight:600;display:flex;align-items:center;justify-content:center;flex:none">MC</span>
+            <div style="flex:1;display:flex;flex-direction:column;gap:10px;background:#fff;border:1px solid #e0ddd4;border-radius:14px;padding:12px 14px">
+              <textarea value="{{ newComment }}" onChange="{{ onNewComment }}" placeholder="Add to the discussion…" rows="2" style="border:none;outline:none;resize:vertical;background:transparent;font-size:15px;line-height:1.5;min-height:44px"></textarea>
+              <div style="display:flex;justify-content:flex-end"><button onClick="{{ onPostComment }}" style="height:34px;padding:0 16px;border:none;border-radius:999px;background:{{ postBg }};color:#fff;font-weight:600;font-size:13px;cursor:pointer">Post comment</button></div>
+            </div>
+          </div>
+        </sc-if>
+        <div style="display:flex;flex-direction:column;gap:22px">
+          <sc-for list="{{ v.comments }}" as="c" hint-placeholder-count="3">
+            <div style="display:flex;flex-direction:column;gap:12px">
+              <div style="display:flex;gap:12px;align-items:flex-start">
+                <span style="width:38px;height:38px;border-radius:50%;background:{{ c.avBg }};color:{{ c.avColor }};font-size:13px;font-weight:600;display:flex;align-items:center;justify-content:center;flex:none">{{ c.initials }}</span>
+                <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:5px">
+                  <div style="align-self:flex-start;max-width:100%;background:#ecebe4;border-radius:16px;padding:10px 14px;box-sizing:border-box">
+                    <div style="font-weight:600;font-size:14px">{{ c.authorName }}</div>
+                    <div style="text-wrap:pretty">{{ c.text }}</div>
+                  </div>
+                  <div style="display:flex;align-items:center;gap:14px;font-size:12.5px;color:#5d665f;padding-left:14px">
+                    <span>{{ c.time }}</span>
+                    <button onClick="{{ c.onLike }}" style="border:none;background:none;padding:0;cursor:pointer;font-weight:600;color:{{ c.likeColor }}">Like</button>
+                    <button onClick="{{ c.onReply }}" style="border:none;background:none;padding:0;cursor:pointer;font-weight:600;color:#5d665f">Reply</button>
+                    <sc-if value="{{ c.hasLikes }}"><span style="display:flex;align-items:center;gap:4px;margin-left:auto"><svg width="13" height="13" viewBox="0 0 24 24" fill="#2e5e45"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1-1.1a5.5 5.5 0 0 0-7.8 7.8L12 21l8.8-8.6a5.5 5.5 0 0 0 0-7.8z"></path></svg>{{ c.likes }}</span></sc-if>
+                  </div>
+                </div>
+              </div>
+              <div style="margin-left:50px;display:flex;flex-direction:column;gap:12px;border-left:2px solid #e4e2da;padding-left:16px">
+                <sc-if value="{{ c.collapsed }}">
+                  <button onClick="{{ c.onExpand }}" style="align-self:flex-start;border:none;background:none;padding:0;cursor:pointer;font-weight:600;font-size:13px;color:#2e5e45">View {{ c.replyCountLabel }}</button>
+                </sc-if>
+                <sc-for list="{{ c.shownReplies }}" as="rp">
+                  <div style="display:flex;gap:10px;align-items:flex-start">
+                    <span style="width:30px;height:30px;border-radius:50%;background:{{ rp.avBg }};color:{{ rp.avColor }};font-size:11px;font-weight:600;display:flex;align-items:center;justify-content:center;flex:none">{{ rp.initials }}</span>
+                    <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:5px">
+                      <div style="align-self:flex-start;max-width:100%;background:#ecebe4;border-radius:16px;padding:9px 13px;box-sizing:border-box;font-size:14.5px">
+                        <div style="font-weight:600;font-size:13.5px">{{ rp.authorName }}</div>
+                        <div style="text-wrap:pretty"><sc-if value="{{ rp.hasMention }}"><span style="color:#2e5e45;font-weight:600">{{ rp.mention }} </span></sc-if>{{ rp.body }}</div>
+                      </div>
+                      <div style="display:flex;align-items:center;gap:14px;font-size:12.5px;color:#5d665f;padding-left:13px">
+                        <span>{{ rp.time }}</span>
+                        <button onClick="{{ rp.onLike }}" style="border:none;background:none;padding:0;cursor:pointer;font-weight:600;color:{{ rp.likeColor }}">Like</button>
+                        <button onClick="{{ rp.onReply }}" style="border:none;background:none;padding:0;cursor:pointer;font-weight:600;color:#5d665f">Reply</button>
+                        <sc-if value="{{ rp.hasLikes }}"><span style="display:flex;align-items:center;gap:4px;margin-left:auto"><svg width="13" height="13" viewBox="0 0 24 24" fill="#2e5e45"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1-1.1a5.5 5.5 0 0 0-7.8 7.8L12 21l8.8-8.6a5.5 5.5 0 0 0 0-7.8z"></path></svg>{{ rp.likes }}</span></sc-if>
+                      </div>
+                    </div>
+                  </div>
+                </sc-for>
+                <sc-if value="{{ c.showReplyBox }}">
+                  <div style="display:flex;gap:10px;align-items:center">
+                    <span style="width:30px;height:30px;border-radius:50%;background:#1f3d2e;color:#f1efe6;font-size:11px;font-weight:600;display:flex;align-items:center;justify-content:center;flex:none">MC</span>
+                    <input autoFocus="{{ true }}" value="{{ c.replyText }}" onChange="{{ c.onReplyChange }}" onKeyDown="{{ c.onReplyKey }}" placeholder="Write a reply… (Enter to send)" style="flex:1;min-width:0;height:38px;padding:0 14px;border:1px solid #e0ddd4;border-radius:999px;background:#fff;outline:none" style-focus="border-color:#2e5e45;box-shadow:0 0 0 3px #dbe7df">
+                    <button onClick="{{ c.onReplySubmit }}" style="height:36px;padding:0 14px;border:none;border-radius:999px;background:#2e5e45;color:#fff;font-weight:600;font-size:13px;cursor:pointer">Reply</button>
+                    <button onClick="{{ c.onReplyCancel }}" style="border:none;background:none;color:#5d665f;cursor:pointer;font-size:13px">Cancel</button>
+                  </div>
+                </sc-if>
+              </div>
+            </div>
+          </sc-for>
+        </div>
+      </section>
+    </article>
+
+    <aside style="flex:0 1 300px;min-width:260px;position:sticky;top:88px;display:flex;flex-direction:column;gap:16px">
+      <div style="background:#fff;border:1px solid #e4e2da;border-radius:14px;padding:20px;display:flex;flex-direction:column;gap:14px">
+        <div style="display:flex;align-items:center;justify-content:space-between">
+          <span style="font-size:11px;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;color:#6b736d">Status</span>
+          <sc-if value="{{ v.isDraftOnly }}"><span style="padding:2px 9px;border-radius:999px;background:#f6ecd6;color:#7a5410;font-weight:600;font-size:12px">Draft</span></sc-if>
+          <sc-if value="{{ v.isPublished }}"><span style="padding:2px 9px;border-radius:999px;background:#e2ebe4;color:#234a36;font-weight:600;font-size:12px">Published</span></sc-if>
+        </div>
+        <div style="font-size:14px;color:#4f5751">{{ v.statusLine }}</div>
+        <sc-if value="{{ v.isMine }}">
+          <button onClick="{{ v.onEdit }}" style="height:40px;border:none;border-radius:10px;background:#2e5e45;color:#fff;font-weight:600;cursor:pointer" style-hover="background:#234a36">{{ v.editLabel }}</button>
+        </sc-if>
+        <sc-if value="{{ v.notMine }}">
+          <button onClick="{{ v.onFollow }}" style="height:40px;border:1px solid #d9d6cc;border-radius:10px;background:#fff;font-weight:500;cursor:pointer" style-hover="background:#fbfaf6">{{ v.followLabel }}</button>
+        </sc-if>
+      </div>
+      <div style="background:#fff;border:1px solid #e4e2da;border-radius:14px;padding:20px 12px 12px;display:flex;flex-direction:column;gap:6px">
+        <div style="font-size:11px;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;color:#6b736d;padding:0 8px 8px">Version history</div>
+        <sc-if value="{{ v.hasPendingMine }}">
+          <button onClick="{{ v.onEdit }}" style="display:flex;gap:12px;align-items:flex-start;padding:10px 8px;border:none;border-radius:10px;background:#fbf6ea;cursor:pointer;text-align:left">
+            <span style="width:9px;height:9px;border-radius:50%;background:#c9952e;margin-top:6px;flex:none"></span>
+            <span style="display:flex;flex-direction:column;gap:2px"><span style="font-weight:600;font-size:14px">Unpublished draft</span><span style="font-size:13px;color:#5d665f">Saved {{ v.draftSaved }} · Continue editing</span></span>
+          </button>
+        </sc-if>
+        <sc-for list="{{ v.versions }}" as="vr" hint-placeholder-count="3">
+          <button onClick="{{ vr.onClick }}" style="display:flex;gap:12px;align-items:flex-start;padding:10px 8px;border:none;border-radius:10px;background:{{ vr.bg }};cursor:pointer;text-align:left" style-hover="background:#f3f5f0">
+            <span style="width:9px;height:9px;border-radius:50%;background:{{ vr.dot }};margin-top:6px;flex:none"></span>
+            <span style="display:flex;flex-direction:column;gap:2px;min-width:0">
+              <span style="display:flex;align-items:center;gap:8px;font-size:14px"><b>{{ vr.label }}</b><span style="color:#5d665f">{{ vr.date }}</span><sc-if value="{{ vr.isLatest }}"><span style="font-size:11px;font-weight:600;color:#2e5e45;background:#e2ebe4;padding:1px 7px;border-radius:999px">Latest</span></sc-if></span>
+              <span style="font-size:13px;color:#4f5751;text-wrap:pretty">{{ vr.note }}</span>
+            </span>
+          </button>
+        </sc-for>
+        <sc-if value="{{ v.noVersions }}"><div style="font-size:13px;color:#5d665f;padding:0 8px 8px">Nothing published yet. v1 is created when you publish.</div></sc-if>
+      </div>
+    </aside>
+  </div>
+</main>
+</sc-if>
+
+<sc-if value="{{ isEdit }}" hint-placeholder-val="{{ false }}">
+<main data-screen-label="Editor" style="max-width:1200px;margin:0 auto;padding:28px 24px 80px;display:flex;flex-direction:column;gap:22px">
+  <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+    <button onClick="{{ onCancelEdit }}" style="display:flex;align-items:center;gap:6px;border:none;background:none;padding:4px 0;color:#5d665f;cursor:pointer;font-size:14px" style-hover="color:#18201b"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M11 18l-6-6 6-6"></path></svg>{{ ed.backLabel }}</button>
+    <span style="color:#c4c1b7">/</span>
+    <span style="font-size:14px;color:#4f5751">{{ ed.heading }}</span>
+    <div style="flex:1"></div>
+    <span style="font-size:13px;color:#6b736d">{{ ed.savedLine }}</span>
+    <button onClick="{{ onSaveDraft }}" style="height:38px;padding:0 16px;border:1px solid #d9d6cc;border-radius:999px;background:#fff;font-weight:500;font-size:14px;cursor:pointer" style-hover="background:#fbfaf6">Save draft</button>
+    <button onClick="{{ onPublish }}" style="height:38px;padding:0 18px;border:none;border-radius:999px;background:#2e5e45;color:#fff;font-weight:600;font-size:14px;cursor:pointer" style-hover="background:#234a36">{{ ed.publishLabel }}</button>
+  </div>
+  <div style="display:flex;flex-wrap:wrap;gap:28px;align-items:flex-start">
+    <div style="flex:1 1 560px;min-width:0;background:#fff;border:1px solid #e4e2da;border-radius:16px;padding:40px 44px;display:flex;flex-direction:column;gap:14px;box-sizing:border-box">
+      <textarea value="{{ ed.title }}" onChange="{{ onTitle }}" placeholder="Proposal title" rows="2" style="border:none;outline:none;resize:none;font-family:'Newsreader',serif;font-weight:500;font-size:40px;line-height:1.12;letter-spacing:-0.02em;padding:0;background:transparent"></textarea>
+      <textarea value="{{ ed.summary }}" onChange="{{ onSummary }}" placeholder="One or two sentences that sum up the ask" rows="2" style="border:none;outline:none;resize:none;font-family:'Newsreader',serif;font-style:italic;font-size:20px;line-height:1.45;color:#4f5751;padding:0;background:transparent"></textarea>
+      <div style="height:1px;background:#ecebe4;margin:6px 0"></div>
+      <textarea value="{{ ed.body }}" onChange="{{ onBody }}" placeholder="Write your proposal. Start a line with ## to add a section heading." style="border:none;outline:none;resize:vertical;min-height:460px;font-family:'Newsreader',serif;font-size:18px;line-height:1.65;color:#232a25;padding:0;background:transparent"></textarea>
+    </div>
+    <aside style="flex:0 1 320px;min-width:260px;position:sticky;top:88px;display:flex;flex-direction:column;gap:16px">
+      <div style="background:#fff;border:1px solid #e4e2da;border-radius:14px;padding:20px;display:flex;flex-direction:column;gap:14px">
+        <div style="display:flex;flex-direction:column;gap:2px">
+          <span style="font-size:11px;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;color:#6b736d">Streams &amp; scores</span>
+          <span style="font-size:13px;color:#5d665f">{{ ed.scoreHint }}</span>
+        </div>
+        <div style="display:flex;gap:6px;flex-wrap:wrap">
+          <sc-for list="{{ ed.scoreItems }}" as="it" hint-placeholder-count="6"><button onClick="{{ it.onToggle }}" style="display:inline-flex;align-items:center;gap:6px;padding:5px 11px 5px 9px;border:1px solid {{ it.chipBorder }};background:{{ it.chipBg }};border-radius:999px;font-size:13px;font-weight:{{ it.chipWeight }};cursor:pointer"><span style="width:8px;height:8px;border-radius:50%;background:{{ it.color }}"></span>{{ it.name }}</button></sc-for>
+        </div>
+        <sc-if value="{{ ed.authorScores }}">
+          <sc-for list="{{ ed.scoreItems }}" as="it"><sc-if value="{{ it.on }}">
+            <div style="display:flex;flex-direction:column;gap:2px">
+              <div style="display:flex;justify-content:space-between;font-size:13px"><span style="display:flex;align-items:center;gap:7px;font-weight:500"><span style="width:8px;height:8px;border-radius:50%;background:{{ it.color }}"></span>{{ it.name }}</span><b style="font-variant-numeric:tabular-nums">{{ it.label }}</b></div>
+              <input type="range" min="1" max="10" step="1" value="{{ it.value }}" onChange="{{ it.onInput }}" style="width:100%;accent-color:#2e5e45;margin:0">
+            </div>
+          </sc-if></sc-for>
+        </sc-if>
+      </div>
+      <div style="background:#fff;border:1px solid #e4e2da;border-radius:14px;padding:20px;display:flex;flex-direction:column;gap:18px">
+        <div style="display:flex;flex-direction:column;gap:4px">
+          <span style="font-size:11px;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;color:#6b736d">Status</span>
+          <span style="font-size:14px">{{ ed.statusText }}</span>
+        </div>
+        <label style="display:flex;flex-direction:column;gap:6px;font-size:13px;font-weight:500">{{ ed.noteLabel }}
+          <textarea value="{{ ed.note }}" onChange="{{ onNote }}" placeholder="{{ ed.notePlaceholder }}" rows="3" style="padding:10px 12px;border:1px solid #e0ddd4;border-radius:9px;background:#fff;font-weight:400;font-size:14px;line-height:1.45;outline:none;resize:vertical" style-focus="border-color:#2e5e45;box-shadow:0 0 0 3px #dbe7df"></textarea>
+          <span style="font-weight:400;color:#6b736d;font-size:12px">{{ ed.publishHint }}</span>
+        </label>
+        <sc-if value="{{ ed.hasError }}"><div style="font-size:13px;color:#a3322a">{{ ed.error }}</div></sc-if>
+      </div>
+      <sc-if value="{{ ed.hasHistory }}">
+        <div style="background:#fff;border:1px solid #e4e2da;border-radius:14px;padding:18px 20px;display:flex;flex-direction:column;gap:10px">
+          <span style="font-size:11px;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;color:#6b736d">Published versions</span>
+          <sc-for list="{{ ed.history }}" as="h">
+            <div style="display:flex;gap:10px;font-size:13px"><b style="flex:none">{{ h.label }}</b><span style="color:#4f5751">{{ h.note }}</span></div>
+          </sc-for>
+        </div>
+      </sc-if>
+    </aside>
+  </div>
+</main>
+</sc-if>
+
+<sc-if value="{{ isSettings }}" hint-placeholder-val="{{ false }}">
+<main data-screen-label="Admin settings" style="max-width:1200px;margin:0 auto;padding:40px 24px 96px;display:flex;flex-direction:column;gap:28px">
+  <div style="display:flex;flex-direction:column;gap:6px">
+    <span style="font-size:11px;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;color:#2e5e45">Admin</span>
+    <h1 style="margin:0;font-family:'Newsreader',serif;font-weight:500;font-size:40px;line-height:1.1;letter-spacing:-0.02em">Settings</h1>
+    <p style="margin:0;color:#5d665f;max-width:620px;text-wrap:pretty">Streams are the public policy areas proposals are organised and scored against. A proposal can belong to several streams, and streams can be marked as overlapping.</p>
+  </div>
+  <div style="display:flex;gap:28px;border-bottom:1px solid #e4e2da">
+    <sc-for list="{{ settingsTabs }}" as="t" hint-placeholder-count="3">
+      <button onClick="{{ t.onClick }}" style="border:none;background:none;padding:0 0 12px;margin-bottom:-1px;border-bottom:2px solid {{ t.border }};font-weight:{{ t.weight }};color:{{ t.color }};cursor:pointer;font-size:15px">{{ t.label }}</button>
+    </sc-for>
+  </div>
+
+  <sc-if value="{{ isStreamsTab }}" hint-placeholder-val="{{ true }}">
+    <div style="display:flex;flex-direction:column;gap:16px">
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap">
+        <span style="color:#5d665f;font-size:14px">{{ streamsSummary }}</span>
+        <button onClick="{{ onAddStream }}" style="display:flex;align-items:center;gap:6px;height:38px;padding:0 16px;border:none;border-radius:999px;background:#2e5e45;color:#fff;font-weight:600;font-size:14px;cursor:pointer" style-hover="background:#234a36"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14"></path></svg>Add stream</button>
+      </div>
+      <div style="display:grid;gap:1px;background:#e7e5dd;border:1px solid #e7e5dd;border-radius:14px;overflow:hidden">
+        <div style="background:#faf9f5;display:grid;grid-template-columns:minmax(0,2.2fr) minmax(0,1.6fr) 110px 120px 70px;gap:20px;padding:10px 22px;font-size:11px;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;color:#6b736d">
+          <span>Stream</span><span>Overlaps with</span><span>Proposals</span><span>Status</span><span></span>
+        </div>
+        <sc-for list="{{ streamRows }}" as="sr" hint-placeholder-count="8">
+          <div style="background:#fff;display:grid;grid-template-columns:minmax(0,2.2fr) minmax(0,1.6fr) 110px 120px 70px;gap:20px;align-items:center;padding:16px 22px">
+            <div style="display:flex;gap:12px;align-items:flex-start;min-width:0;opacity:{{ sr.opacity }}">
+              <span style="width:12px;height:12px;border-radius:4px;background:{{ sr.color }};margin-top:5px;flex:none"></span>
+              <div style="display:flex;flex-direction:column;min-width:0"><span style="font-weight:600">{{ sr.name }}</span><span style="font-size:13px;color:#5d665f;text-wrap:pretty">{{ sr.desc }}</span></div>
+            </div>
+            <div style="display:flex;gap:6px;flex-wrap:wrap;opacity:{{ sr.opacity }}">
+              <sc-for list="{{ sr.related }}" as="rl"><span style="display:inline-flex;align-items:center;gap:5px;padding:2px 9px 2px 7px;border:1px solid #e4e2da;border-radius:999px;font-size:12px"><span style="width:7px;height:7px;border-radius:50%;background:{{ rl.color }}"></span>{{ rl.name }}</span></sc-for>
+              <sc-if value="{{ sr.noRelated }}"><span style="font-size:13px;color:#8a918b">None</span></sc-if>
+            </div>
+            <span style="font-size:14px;font-variant-numeric:tabular-nums">{{ sr.count }}</span>
+            <div style="display:flex;align-items:center;gap:10px">
+              <button onClick="{{ sr.onToggle }}" title="Toggle active" style="width:40px;height:24px;border-radius:999px;border:none;background:{{ sr.trackBg }};position:relative;cursor:pointer;flex:none;padding:0"><span style="position:absolute;top:3px;left:{{ sr.knobLeft }};width:18px;height:18px;border-radius:50%;background:#fff;box-shadow:0 1px 2px rgba(0,0,0,0.2);transition:left .15s"></span></button>
+              <span style="font-size:13px;color:#4f5751">{{ sr.activeLabel }}</span>
+            </div>
+            <button onClick="{{ sr.onEdit }}" style="justify-self:end;height:32px;padding:0 14px;border:1px solid #d9d6cc;border-radius:999px;background:#fff;font-size:13px;font-weight:500;cursor:pointer" style-hover="background:#fbfaf6">Edit</button>
+          </div>
+        </sc-for>
+      </div>
+      <p style="margin:0;font-size:13px;color:#6b736d">Inactive streams stay on existing proposals but can't be picked for new ones and are hidden from the public filter.</p>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ isScoringTab }}" hint-placeholder-val="{{ false }}">
+    <div style="display:grid;gap:1px;background:#e7e5dd;border:1px solid #e7e5dd;border-radius:14px;overflow:hidden;max-width:880px">
+      <div style="background:#fff;padding:22px 24px;display:flex;justify-content:space-between;gap:24px;flex-wrap:wrap;align-items:center">
+        <div style="display:flex;flex-direction:column;gap:2px;max-width:440px"><span style="font-weight:600">Score scale</span><span style="font-size:14px;color:#5d665f">How stream scores are shown everywhere on the site. Changing it converts existing scores.</span></div>
+        <div style="display:flex;padding:3px;background:#f0efe9;border-radius:10px;gap:2px">
+          <sc-for list="{{ scaleOpts }}" as="o"><button onClick="{{ o.onClick }}" style="height:34px;padding:0 16px;border:none;border-radius:8px;background:{{ o.bg }};box-shadow:{{ o.shadow }};font-weight:{{ o.weight }};font-size:14px;cursor:pointer">{{ o.label }}</button></sc-for>
+        </div>
+      </div>
+      <div style="background:#fff;padding:22px 24px;display:flex;flex-direction:column;gap:14px">
+        <div style="display:flex;flex-direction:column;gap:2px"><span style="font-weight:600">Who assigns scores</span><span style="font-size:14px;color:#5d665f">Authors always choose which streams their proposal belongs to.</span></div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px">
+          <sc-for list="{{ whoOpts }}" as="o">
+            <button onClick="{{ o.onClick }}" style="display:flex;gap:12px;align-items:flex-start;text-align:left;padding:14px 16px;border:1px solid {{ o.border }};background:{{ o.bg }};border-radius:12px;cursor:pointer">
+              <span style="width:16px;height:16px;border-radius:50%;border:2px solid {{ o.ring }};box-sizing:border-box;margin-top:2px;flex:none;display:flex;align-items:center;justify-content:center"><span style="width:8px;height:8px;border-radius:50%;background:{{ o.dot }}"></span></span>
+              <span style="display:flex;flex-direction:column;gap:2px"><span style="font-weight:600;font-size:14px">{{ o.title }}</span><span style="font-size:13px;color:#5d665f;text-wrap:pretty">{{ o.desc }}</span></span>
+            </button>
+          </sc-for>
+        </div>
+      </div>
+      <sc-for list="{{ scoringToggles }}" as="o">
+        <div style="background:#fff;padding:20px 24px;display:flex;justify-content:space-between;gap:24px;align-items:center">
+          <div style="display:flex;flex-direction:column;gap:2px;max-width:560px"><span style="font-weight:600">{{ o.title }}</span><span style="font-size:14px;color:#5d665f">{{ o.desc }}</span></div>
+          <button onClick="{{ o.onToggle }}" style="width:40px;height:24px;border-radius:999px;border:none;background:{{ o.trackBg }};position:relative;cursor:pointer;flex:none;padding:0"><span style="position:absolute;top:3px;left:{{ o.knobLeft }};width:18px;height:18px;border-radius:50%;background:#fff;box-shadow:0 1px 2px rgba(0,0,0,0.2);transition:left .15s"></span></button>
+        </div>
+      </sc-for>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ isOverlapTab }}" hint-placeholder-val="{{ false }}">
+    <div style="display:flex;flex-wrap:wrap;gap:32px;align-items:flex-start">
+      <div style="flex:1 1 620px;min-width:0;display:flex;flex-direction:column;gap:14px">
+        <p style="margin:0;color:#5d665f;font-size:14px;max-width:620px;text-wrap:pretty">Each cell counts published proposals scored in both streams. The diagonal is the stream's total. Outlined cells are streams you've marked as overlapping.</p>
+        <div style="overflow-x:auto;background:#fff;border:1px solid #e4e2da;border-radius:14px;padding:18px">
+          <table style="border-collapse:separate;border-spacing:4px;font-size:13px">
+            <thead><tr>
+              <th style="width:130px"></th>
+              <sc-for list="{{ matrixCols }}" as="mc"><th style="width:64px;font-weight:500;font-size:11.5px;color:#3a423c;vertical-align:bottom;padding-bottom:4px;line-height:1.25"><div style="display:flex;flex-direction:column;align-items:center;gap:5px"><span style="width:8px;height:8px;border-radius:50%;background:{{ mc.color }}"></span>{{ mc.name }}</div></th></sc-for>
+            </tr></thead>
+            <tbody>
+              <sc-for list="{{ matrixRows }}" as="mr">
+                <tr>
+                  <td style="padding-right:10px;white-space:nowrap;font-weight:500"><span style="display:inline-flex;align-items:center;gap:8px"><span style="width:8px;height:8px;border-radius:50%;background:{{ mr.color }}"></span>{{ mr.name }}</span></td>
+                  <sc-for list="{{ mr.cells }}" as="cl"><td style="width:64px;height:44px;text-align:center;border-radius:8px;background:{{ cl.bg }};color:{{ cl.color }};box-shadow:{{ cl.shadow }};font-weight:{{ cl.weight }};font-variant-numeric:tabular-nums">{{ cl.label }}</td></sc-for>
+                </tr>
+              </sc-for>
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <div style="flex:0 1 320px;min-width:260px;background:#fff;border:1px solid #e4e2da;border-radius:14px;padding:20px;display:flex;flex-direction:column;gap:14px">
+        <div style="display:flex;flex-direction:column;gap:2px"><span style="font-size:11px;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;color:#6b736d">Suggested overlaps</span><span style="font-size:13px;color:#5d665f">Stream pairs that often share proposals but aren't linked yet.</span></div>
+        <sc-for list="{{ suggestions }}" as="sg">
+          <div style="display:flex;align-items:center;gap:12px;padding:10px 0;border-top:1px solid #efede6">
+            <div style="flex:1;display:flex;flex-direction:column;gap:2px;font-size:14px"><span style="font-weight:600">{{ sg.a }} + {{ sg.b }}</span><span style="font-size:13px;color:#5d665f">{{ sg.countLabel }}</span></div>
+            <button onClick="{{ sg.onMark }}" style="height:30px;padding:0 12px;border:1px solid #d9d6cc;border-radius:999px;background:#fff;font-size:12.5px;font-weight:500;cursor:pointer" style-hover="background:#fbfaf6">Link</button>
+          </div>
+        </sc-for>
+        <sc-if value="{{ noSuggestions }}"><div style="font-size:13px;color:#6b736d">No suggestions right now.</div></sc-if>
+      </div>
+    </div>
+  </sc-if>
+</main>
+</sc-if>
+
+<sc-if value="{{ sd.isOpen }}" hint-placeholder-val="{{ false }}">
+  <div onClick="{{ sd.onCancel }}" style="position:fixed;inset:0;background:rgba(24,32,27,0.28);z-index:40"></div>
+  <div style="position:fixed;top:0;right:0;bottom:0;width:min(460px,100%);background:#fff;z-index:41;box-shadow:-12px 0 40px rgba(24,32,27,0.15);display:flex;flex-direction:column;animation:ipDrawer .2s ease-out">
+    <div style="padding:24px 28px;border-bottom:1px solid #efede6;display:flex;justify-content:space-between;align-items:center">
+      <h2 style="margin:0;font-family:'Newsreader',serif;font-weight:500;font-size:26px">{{ sd.title }}</h2>
+      <button onClick="{{ sd.onCancel }}" style="width:34px;height:34px;border:none;background:#f3f2ec;border-radius:50%;cursor:pointer;font-size:18px;line-height:1">×</button>
+    </div>
+    <div style="flex:1;overflow-y:auto;padding:24px 28px;display:flex;flex-direction:column;gap:22px">
+      <label style="display:flex;flex-direction:column;gap:6px;font-size:13px;font-weight:500">Name
+        <input value="{{ sd.name }}" onChange="{{ sd.onName }}" placeholder="e.g. Agriculture" style="height:42px;padding:0 12px;border:1px solid #e0ddd4;border-radius:9px;background:#fff;font-weight:400;font-size:15px;outline:none" style-focus="border-color:#2e5e45;box-shadow:0 0 0 3px #dbe7df">
+      </label>
+      <label style="display:flex;flex-direction:column;gap:6px;font-size:13px;font-weight:500">Description
+        <textarea value="{{ sd.desc }}" onChange="{{ sd.onDesc }}" rows="3" placeholder="What kinds of proposals belong here?" style="padding:10px 12px;border:1px solid #e0ddd4;border-radius:9px;background:#fff;font-weight:400;font-size:14px;line-height:1.45;outline:none;resize:vertical" style-focus="border-color:#2e5e45;box-shadow:0 0 0 3px #dbe7df"></textarea>
+      </label>
+      <div style="display:flex;flex-direction:column;gap:10px">
+        <span style="font-size:13px;font-weight:500">Colour</span>
+        <div style="display:flex;gap:10px;flex-wrap:wrap">
+          <sc-for list="{{ sd.colors }}" as="co"><button onClick="{{ co.onClick }}" style="width:28px;height:28px;border-radius:50%;border:none;background:{{ co.hex }};box-shadow:{{ co.ring }};cursor:pointer;padding:0"></button></sc-for>
+        </div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:10px">
+        <div style="display:flex;flex-direction:column;gap:2px"><span style="font-size:13px;font-weight:500">Overlaps with</span><span style="font-size:12.5px;color:#6b736d">Linked streams are suggested together when authors tag a proposal.</span></div>
+        <div style="display:flex;gap:6px;flex-wrap:wrap">
+          <sc-for list="{{ sd.others }}" as="o"><button onClick="{{ o.onClick }}" style="display:inline-flex;align-items:center;gap:6px;padding:5px 12px 5px 9px;border:1px solid {{ o.border }};background:{{ o.bg }};border-radius:999px;font-size:13px;font-weight:{{ o.weight }};cursor:pointer"><span style="width:8px;height:8px;border-radius:50%;background:{{ o.color }}"></span>{{ o.name }}</button></sc-for>
+        </div>
+      </div>
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:16px">
+        <div style="display:flex;flex-direction:column;gap:2px"><span style="font-size:13px;font-weight:500">Active</span><span style="font-size:12.5px;color:#6b736d">Available for new proposals and public filters.</span></div>
+        <button onClick="{{ sd.onToggleActive }}" style="width:40px;height:24px;border-radius:999px;border:none;background:{{ sd.trackBg }};position:relative;cursor:pointer;flex:none;padding:0"><span style="position:absolute;top:3px;left:{{ sd.knobLeft }};width:18px;height:18px;border-radius:50%;background:#fff;box-shadow:0 1px 2px rgba(0,0,0,0.2);transition:left .15s"></span></button>
+      </div>
+      <sc-if value="{{ sd.hasError }}"><div style="font-size:13px;color:#a3322a">{{ sd.error }}</div></sc-if>
+    </div>
+    <div style="padding:18px 28px;border-top:1px solid #efede6;display:flex;align-items:center;gap:10px">
+      <sc-if value="{{ sd.canDelete }}"><button onClick="{{ sd.onDelete }}" style="border:none;background:none;color:#a3322a;font-weight:500;cursor:pointer;padding:0">Delete stream</button></sc-if>
+      <sc-if value="{{ sd.inUse }}"><span style="flex:1;min-width:0;font-size:12.5px;line-height:1.35;color:#6b736d">{{ sd.inUseLabel }}</span></sc-if>
+      <div style="flex:1"></div>
+      <button onClick="{{ sd.onCancel }}" style="flex:none;white-space:nowrap;height:38px;padding:0 16px;border:1px solid #d9d6cc;border-radius:999px;background:#fff;font-weight:500;font-size:14px;cursor:pointer">Cancel</button>
+      <button onClick="{{ sd.onSave }}" style="flex:none;white-space:nowrap;height:38px;padding:0 18px;border:none;border-radius:999px;background:#2e5e45;color:#fff;font-weight:600;font-size:14px;cursor:pointer" style-hover="background:#234a36">Save stream</button>
+    </div>
+  </div>
+</sc-if>
+
+<sc-if value="{{ hasToast }}" hint-placeholder-val="{{ false }}">
+  <div style="position:fixed;left:50%;bottom:28px;transform:translateX(-50%);background:#1f3d2e;color:#f1efe6;padding:11px 20px;border-radius:999px;font-size:14px;font-weight:500;box-shadow:0 10px 30px rgba(24,32,27,0.25);animation:ipToast .25s ease-out;z-index:50">{{ toast }}</div>
+</sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;startScreen&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;login&quot;,&quot;list&quot;,&quot;view&quot;,&quot;edit&quot;,&quot;settings&quot;],&quot;default&quot;:&quot;login&quot;,&quot;tsType&quot;:&quot;'login'|'list'|'view'|'edit'|'settings'&quot;},&quot;listDensity&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;comfortable&quot;,&quot;compact&quot;],&quot;default&quot;:&quot;comfortable&quot;,&quot;tsType&quot;:&quot;'comfortable'|'compact'&quot;}}">
+const PEOPLE={maya:{name:'Maya Chen',initials:'MC'},priya:{name:'Priya Raman',initials:'PR'},daniel:{name:'Daniel Okafor',initials:'DO'},lena:{name:'Lena Fischer',initials:'LF'},tomas:{name:'Tomás Herrera',initials:'TH'},sam:{name:'Sam Whitfield',initials:'SW'},jun:{name:'Jun Park',initials:'JP'},ava:{name:'Ava Moreau',initials:'AM'}};
+let UID=100;const nid=()=>'c'+(UID++);
+const cm=(author,text,time,likes,replies=[])=>({id:nid(),author,text,time,likes,liked:false,replies:replies.map(r=>({id:nid(),author:r[0],text:r[1],time:r[2],likes:r[3],liked:false}))});
+const COLORS=['#2e5e45','#2f7680','#3b6a8f','#4c5aa0','#7a3f5e','#a0522d','#8a5a2b','#5b7a2e'];
+const STREAMS=[
+ {id:'health',name:'Healthcare',desc:'Hospitals, public health, clinics and medical services.',color:'#2f7680',active:true,related:['finance','it']},
+ {id:'finance',name:'Finance',desc:'Public budgets, taxation, procurement and spending.',color:'#8a5a2b',active:true,related:['health']},
+ {id:'law',name:'Law & Justice',desc:'Legislation, courts, legal aid and regulation.',color:'#7a3f5e',active:true,related:['it']},
+ {id:'it',name:'IT & Digital',desc:'Digital public services, data, connectivity and e-government.',color:'#4c5aa0',active:true,related:['health','law']},
+ {id:'tourism',name:'Tourism',desc:'Visitor economy, heritage sites and destination promotion.',color:'#a0522d',active:true,related:['transport','env']},
+ {id:'transport',name:'Transport',desc:'Roads, public transit, cycling and freight.',color:'#3b6a8f',active:true,related:['tourism','env']},
+ {id:'env',name:'Environment',desc:'Climate, conservation, waste and clean energy.',color:'#5b7a2e',active:true,related:['tourism','transport']},
+ {id:'edu',name:'Education',desc:'Schools, universities, skills and lifelong learning.',color:'#2e5e45',active:true,related:[]},
+ {id:'agri',name:'Agriculture',desc:'Farming, food security and rural livelihoods.',color:'#8a5a2b',active:false,related:[]}
+];
+
+const P1a="## The problem\n\nAbout 340,000 people in the northern region live more than 70 km from a full-service hospital. Emergency patients travel an average of 95 minutes, and the two existing clinics refer most cases out of the district.";
+const P1cost="## Cost and funding\n\nThe estimated capital cost is 48 million, funded by the national health infrastructure fund (60%), the provincial budget (25%) and a development bank loan (15%). Annual running costs are estimated at 9 million.";
+const P1v1=P1a+"\n\n## Proposal\n\nBuild a 200-bed district hospital with emergency, maternity, surgery and outpatient departments on the public land next to the regional health office.";
+const P1v2=P1v1+"\n\n"+P1cost;
+const P1v3=P1a+"\n\n## Proposal\n\nBuild a 200-bed district hospital on the public land next to the regional health office, in two phases. Phase 1 opens outpatient, maternity and emergency care within 18 months. Phase 2 adds surgery and inpatient wards.\n\n"+P1cost+"\n\n## Access\n\nThe site needs a 3 km upgraded access road and a bus stop on the regional route. The provincial roads authority would deliver the road alongside Phase 1.";
+const T1='Build a 200-bed district hospital in the northern region',S1='The nearest full-service hospital is 70 km away for 340,000 residents. A district hospital would cut emergency travel times by more than half.';
+const P2why="## Why\n\nCitizens currently need a formal information request to see most government contracts, and responses take an average of 11 weeks.";
+const P2v1=P2why+"\n\n## Proposal\n\nPublish every signed contract above 5 million, with amendments and the winning bid, in a searchable online register within 30 days of signing.";
+const P2v2=P2why+"\n\n## Proposal\n\nPublish every signed contract above 1 million, with amendments and the winning bid, in a searchable online register within 30 days of signing.\n\n## Redaction\n\nPersonal data and genuinely security-sensitive clauses may be redacted. Each redaction must cite its legal basis, and the redaction log is itself public.";
+const P3v1="## Proposal\n\nProvide a free daily meal to every primary school student in the district, starting with the 40 schools with the highest absence rates.\n\n## Local sourcing\n\nAt least 40% of produce would be bought from farms within the district through simplified, published tenders.\n\n## Expected outcomes\n\nHigher attendance, better nutrition indicators in annual health checks, and a stable buyer for small farms.";
+const P5v1="## The problem\n\nMore than half of people appearing in district courts for civil matters have no legal representation. Many cannot afford a lawyer and don't know that free help exists.\n\n## Proposal\n\nOpen a free legal aid desk in every district court, staffed two days a week by volunteer lawyers and supervised law students.";
+const P5draft=P5v1+"\n\n## Funding\n\nThe bar association has offered volunteer hours. The remaining cost, mainly coordination staff and desk space, is about 600,000 a year.\n\n## Measuring success\n\nShare of civil cases with some form of legal advice, and the number of cases resolved before a full hearing.";
+const P4v1="## Proposal\n\nCreate a signed 4 km walking trail linking the old town's twelve listed buildings, with a small visitor centre in the former customs house.";
+const P4v2=P4v1+"\n\n## Why now\n\nVisitor numbers have grown 30% in three years, but most visitors stay less than half a day. A trail gives them reasons to stay longer and spreads spending beyond the main square.\n\n## Protecting the site\n\nThe trail uses existing streets. Coach parking moves to the edge of the old town, with a shuttle to the visitor centre.";
+const P7v1="## Proposal\n\nRun a 12-month pilot replacing diesel buses with 14 electric buses on routes 4 and 11, the two busiest city routes.\n\n## Costs\n\nThe buses are leased, so capital cost is limited to two depot charging stations. Fuel and maintenance savings are expected to cover about 70% of the lease.\n\n## What we'd measure\n\nReliability, operating cost per kilometre, air quality on both routes, and passenger satisfaction.";
+const P8v1="## The problem\n\nLand disputes make up roughly a third of civil cases in district courts. Most come from paper records that are incomplete, duplicated or lost.\n\n## Proposal\n\nDigitise the land registry over three years, starting with the districts with the most disputes. Every title gets a unique ID, a mapped boundary and a full ownership history that owners can check online.";
+const P6draft="## The problem\n\nRural health centres often have a nurse but no doctor on site. Patients travel to the district hospital for consultations that could happen remotely.\n\n## Proposal\n\nInstall telemedicine kiosks in 25 rural health centres, connecting nurses and patients to on-call doctors at the district hospital by video.";
+
+const v=(n,date,note,title,summary,body)=>({v:n,date,note,title,summary,body});
+const SEED=[
+ {id:'p1',author:'priya',scores:{health:9,finance:6,transport:3},ts:10,updated:'2 days ago',draft:null,following:false,
+  versions:[v(1,'Sep 12','Initial version',T1,S1,P1v1),v(2,'Sep 20','Added cost and funding sources',T1,S1,P1v2),v(3,'Sep 30','Split construction into two phases; added access road plan',T1,S1,P1v3)],
+  comments:[
+   cm('daniel','Phasing makes this much easier to fund. Good to see the outpatient wing opening first.','2d',6,[['priya','That was the main feedback from the v2 consultation. Thanks for pushing on it.','2d',2],['lena','@Daniel Okafor the regional health board said the same at the last public meeting.','1d',3],['sam','Staffing is the real constraint. Is there a recruitment plan for doctors and nurses?','1d',4]]),
+   cm('jun','Who maintains the access road after construction? The last project left that unclear.','1d',4,[['priya','The provincial roads authority. I’ll name them explicitly in the next version.','1d',1]]),
+   cm('ava','The capital estimate looks low compared with similar hospitals built in the last five years.','20h',2),
+   cm('sam','Could some beds be reserved for long-term care? The population is ageing faster than the forecasts assumed.','6h',1,[['tomas','Worth a separate proposal. It would change the finance score quite a bit.','5h',5]])
+  ]},
+ {id:'p2',author:'daniel',scores:{finance:9,law:7,it:5},ts:9,updated:'3 days ago',draft:null,following:false,
+  versions:[v(1,'Sep 18','Initial version','Publish all public procurement contracts online within 30 days','Every signed government contract, with its amendments, in a searchable open register.',P2v1),v(2,'Sep 29','Lowered threshold to 1 million; added redaction rules','Publish all public procurement contracts online within 30 days','Every signed government contract, with its amendments, in a searchable open register.',P2v2)],
+  comments:[cm('lena','A register is only useful if the data is structured. Can we require a standard format?','3d',3,[['daniel','Yes. Contracts would follow an open data standard so they can be compared across agencies.','3d',2]]),cm('jun','The 30-day deadline is ambitious for smaller municipalities.','2d',4)]},
+ {id:'p3',author:'lena',scores:{edu:8,health:5,finance:4,env:3},ts:8,updated:'5 days ago',draft:null,following:true,
+  versions:[v(1,'Sep 27','Initial version','Free school meals sourced from local farms','A daily meal for every primary student, with at least 40% of produce bought from farms in the district.',P3v1)],
+  comments:[cm('priya','Who checks food safety for the smaller suppliers?','4d',2),cm('ava','The finance score seems low given the cost of a daily meal at this scale.','4d',1)]},
+ {id:'p8',author:'jun',scores:{law:8,it:9,finance:4},ts:7.5,updated:'6 days ago',draft:null,following:false,
+  versions:[v(1,'Sep 26','Initial version','Digital land registry to reduce property disputes','Move land titles from paper to a public digital registry, starting where disputes are most common.',P8v1)],
+  comments:[cm('lena','How will people without internet access check their titles?','5d',3)]},
+ {id:'p5',author:'maya',scores:{law:9,finance:4},ts:7,updated:'1 week ago',following:false,
+  draft:{title:'Free legal aid clinics at every district court',summary:'Free first-line legal advice for people who come to court without a lawyer.',body:P5draft,saved:'yesterday'},
+  versions:[v(1,'Sep 24','Initial version','Free legal aid clinics at every district court','Free first-line legal advice for people who come to court without a lawyer.',P5v1)],
+  comments:[cm('daniel','Would the desks also help with family and tenancy cases? That’s where most unrepresented people are.','6d',2,[['maya','Yes, civil matters broadly. I’ll make that explicit in the next version.','5d',1]]),cm('sam','Law students would get valuable experience from this too.','5d',3)]},
+ {id:'p4',author:'tomas',scores:{tourism:9,transport:4,env:3,finance:3},ts:6,updated:'2 weeks ago',draft:null,following:false,
+  versions:[v(1,'Sep 10','Initial version','Heritage trail and visitor centre for the old town','A signed walking trail through the old town’s listed buildings, with a visitor centre in the former customs house.',P4v1),v(2,'Sep 16','Added rationale and site protection measures','Heritage trail and visitor centre for the old town','A signed walking trail through the old town’s listed buildings, with a visitor centre in the former customs house.',P4v2)],
+  comments:[cm('ava','Moving coach parking will need consultation with shop owners on the main square.','2w',2,[['tomas','Agreed. A session with the traders’ association is planned for next month.','2w',0]])]},
+ {id:'p7',author:'sam',scores:{transport:9,env:8,finance:4},ts:5,updated:'3 weeks ago',draft:null,following:false,
+  versions:[v(1,'Sep 8','Initial version','Electric bus pilot on two city routes','Lease 14 electric buses for a year on the two busiest routes and measure cost, reliability and air quality.',P7v1)],comments:[]},
+ {id:'p6',author:'maya',scores:{health:8,it:7},ts:4,updated:'4 days ago',following:false,versions:[],comments:[],
+  draft:{title:'Telemedicine kiosks for rural health centres',summary:'Connect rural nurses and patients to district hospital doctors by video.',body:P6draft,saved:'4 days ago'}}
+];
+const ME='maya';
+const latest=p=>p.versions[p.versions.length-1]||null;
+const content=p=>latest(p)||p.draft;
+const nComments=p=>p.comments.reduce((a,c)=>a+1+c.replies.length,0);
+const track=on=>({trackBg:on?'#2e5e45':'#cfccc2',knobLeft:on?'19px':'3px'});
+
+class Component extends DCLogic {
+  state={screen:'login',email:'maya.chen@insight.gov',password:'insight2026',loginError:'',proposals:SEED,streams:STREAMS,
+    settings:{scale:'10',scoredBy:'both',requireStream:true,showPublic:true},settingsTab:'streams',streamDraft:null,
+    query:'',tab:'all',stream:null,sort:'recent',currentId:null,viewV:null,scoreEdit:null,newComment:'',replyTo:null,replyText:'',expanded:{},edit:null,toast:'',menuOpen:false};
+  componentDidMount(){
+    const s=this.props.startScreen;
+    if(s==='list')this.setState({screen:'list'});
+    if(s==='view')this.setState({screen:'view',currentId:'p1'});
+    if(s==='edit')this.editProposal('p5');
+    if(s==='settings')this.setState({screen:'settings'});
+  }
+  go(o){this.setState({menuOpen:false,scoreEdit:null,...o});window.scrollTo(0,0);}
+  flash(t){this.setState({toast:t});clearTimeout(this._t);this._t=setTimeout(()=>this.setState({toast:''}),2400);}
+  upd(id,fn){this.setState(s=>({proposals:s.proposals.map(p=>p.id===id?fn(p):p)}));}
+  fmt(n){const sc=this.state.settings.scale;return sc==='5'?Math.max(1,Math.round(n/2)):sc==='100'?n*10:n;}
+  suffix(){return '/'+this.state.settings.scale;}
+  stream(id){return this.state.streams.find(x=>x.id===id);}
+  login(){const{email,password}=this.state;if(!/.+@.+\..+/.test(email))return this.setState({loginError:'Enter a valid email address.'});if(!password)return this.setState({loginError:'Enter your password.'});this.go({screen:'list',loginError:''});}
+  open(id){this.go({screen:'view',currentId:id,viewV:null,replyTo:null,newComment:''});}
+  newProposal(){this.go({screen:'edit',edit:{id:null,title:'',summary:'',body:'',scores:{},note:'',error:'',saved:null}});}
+  editProposal(id){const p=this.state.proposals.find(x=>x.id===id);const src=p.draft||latest(p);this.go({screen:'edit',edit:{id,title:src.title,summary:src.summary,body:src.body,scores:{...p.scores},note:'',error:'',saved:p.draft?p.draft.saved:null}});}
+  setEdit(o){this.setState(s=>({edit:{...s.edit,...o}}));}
+  field(k){return e=>{const val=e.target.value;this.setEdit({[k]:val,error:''});};}
+  saveDraft(){
+    const e=this.state.edit;if(!e.title.trim())return this.setEdit({error:'Add a title before saving a draft.'});
+    const d={title:e.title.trim(),summary:e.summary.trim(),body:e.body,saved:'just now'};
+    if(!e.id){const id='p'+Date.now();this.setState(s=>({proposals:[{id,author:ME,scores:e.scores,ts:Date.now(),updated:'Just now',versions:[],comments:[],draft:d,following:false},...s.proposals],edit:{...s.edit,id,saved:'just now'}}));}
+    else{this.upd(e.id,p=>({...p,draft:d,scores:e.scores,ts:Date.now(),updated:'Just now'}));this.setEdit({saved:'just now'});}
+    this.flash('Draft saved');
+  }
+  publish(){
+    const e=this.state.edit;const p=e.id&&this.state.proposals.find(x=>x.id===e.id);
+    if(!e.title.trim()||!e.summary.trim()||!e.body.trim())return this.setEdit({error:'A title, summary and body are required to publish.'});
+    if(this.state.settings.requireStream&&!Object.keys(e.scores).length)return this.setEdit({error:'Pick at least one stream before publishing.'});
+    const isUpd=p&&p.versions.length>0;if(isUpd&&!e.note.trim())return this.setEdit({error:'Describe what changed in this version.'});
+    const n=(p?p.versions.length:0)+1;const ver=v(n,'Oct 2',e.note.trim()||'Initial version',e.title.trim(),e.summary.trim(),e.body);
+    if(!p){const id='p'+Date.now();this.setState(s=>({proposals:[{id,author:ME,scores:e.scores,ts:Date.now(),updated:'Just now',versions:[ver],comments:[],draft:null,following:false},...s.proposals]}));this.go({screen:'view',currentId:id,viewV:null,edit:null});}
+    else{this.upd(p.id,q=>({...q,scores:e.scores,versions:[...q.versions,ver],draft:null,ts:Date.now(),updated:'Just now'}));this.go({screen:'view',currentId:p.id,viewV:null,edit:null});}
+    this.flash('Published v'+n);
+  }
+  like(pid,cid,rid){this.upd(pid,p=>({...p,comments:p.comments.map(c=>{if(c.id!==cid)return c;if(!rid)return{...c,liked:!c.liked,likes:c.likes+(c.liked?-1:1)};return{...c,replies:c.replies.map(r=>r.id!==rid?r:{...r,liked:!r.liked,likes:r.likes+(r.liked?-1:1)})};})}));}
+  postComment(){const t=this.state.newComment.trim();if(!t)return;this.upd(this.state.currentId,p=>({...p,comments:[{id:nid(),author:ME,text:t,time:'Just now',likes:0,liked:false,replies:[]},...p.comments]}));this.setState({newComment:''});}
+  submitReply(cid){const t=this.state.replyText.trim();if(!t)return;this.upd(this.state.currentId,p=>({...p,comments:p.comments.map(c=>c.id!==cid?c:{...c,replies:[...c.replies,{id:nid(),author:ME,text:t,time:'Just now',likes:0,liked:false}]})}));this.setState(s=>({replyTo:null,replyText:'',expanded:{...s.expanded,[cid]:true}}));}
+  av(a){return a===ME?{avBg:'#1f3d2e',avColor:'#f1efe6'}:{avBg:'#e2ebe4',avColor:'#234a36'};}
+  splitMention(text){const m=Object.values(PEOPLE).map(p=>'@'+p.name).find(n=>text.startsWith(n));return m?{hasMention:true,mention:m,body:text.slice(m.length).trim()}:{hasMention:false,mention:'',body:text};}
+  scoreItems(scores,set){
+    return this.state.streams.filter(st=>st.active||scores[st.id]!=null).map(st=>{const on=scores[st.id]!=null;return{name:st.name,color:st.color,on,value:on?scores[st.id]:5,label:on?this.fmt(scores[st.id])+this.suffix():'',
+      chipBg:on?'#eef3ee':'#fff',chipBorder:on?'#2e5e45':'#e0ddd4',chipWeight:on?600:400,
+      onToggle:()=>{const n={...scores};if(on)delete n[st.id];else n[st.id]=5;set(n);},onInput:e=>set({...scores,[st.id]:+e.target.value})};});
+  }
+  sortedScores(p){return Object.entries(p.scores).map(([id,n])=>({st:this.stream(id),n})).filter(x=>x.st).sort((a,b)=>b.n-a.n);}
+  // settings
+  openStream(id){const st=id&&this.stream(id);this.setState({streamDraft:st?{...st,related:[...st.related],error:''}:{id:null,name:'',desc:'',color:COLORS[0],active:true,related:[],error:''}});}
+  setSD(o){this.setState(s=>({streamDraft:{...s.streamDraft,...o}}));}
+  saveStream(){
+    const d=this.state.streamDraft;const name=d.name.trim();if(!name)return this.setSD({error:'Give the stream a name.'});
+    if(this.state.streams.some(x=>x.id!==d.id&&x.name.toLowerCase()===name.toLowerCase()))return this.setSD({error:'A stream with this name already exists.'});
+    const id=d.id||name.toLowerCase().replace(/[^a-z0-9]+/g,'-')+'-'+Date.now().toString(36);
+    const rec={id,name,desc:d.desc.trim(),color:d.color,active:d.active,related:d.related};
+    this.setState(s=>{let list=d.id?s.streams.map(x=>x.id===id?rec:x):[...s.streams,rec];
+      list=list.map(x=>{if(x.id===id)return x;const want=rec.related.includes(x.id);const has=x.related.includes(id);if(want&&!has)return{...x,related:[...x.related,id]};if(!want&&has)return{...x,related:x.related.filter(r=>r!==id)};return x;});
+      return{streams:list,streamDraft:null};});
+    this.flash(d.id?'Stream updated':'Stream added');
+  }
+  deleteStream(){const id=this.state.streamDraft.id;this.setState(s=>({streams:s.streams.filter(x=>x.id!==id).map(x=>({...x,related:x.related.filter(r=>r!==id)})),streamDraft:null}));this.flash('Stream deleted');}
+  setSetting(o){this.setState(s=>({settings:{...s.settings,...o}}));}
+  link(a,b){this.setState(s=>({streams:s.streams.map(x=>x.id===a&&!x.related.includes(b)?{...x,related:[...x.related,b]}:x.id===b&&!x.related.includes(a)?{...x,related:[...x.related,a]}:x)}));this.flash('Streams linked');}
+
+  renderVals(){
+    const s=this.state;const compact=this.props.listDensity==='compact';const sfx=this.suffix();
+    const activeStreams=s.streams.filter(x=>x.active);
+    const visible=s.proposals.filter(p=>p.versions.length||p.author===ME);
+    const published=s.proposals.filter(p=>p.versions.length);
+    const tabDefs=[['all','All proposals',visible],['mine','My proposals',s.proposals.filter(p=>p.author===ME)],['drafts','Drafts',s.proposals.filter(p=>p.author===ME&&p.draft)],['following','Following',visible.filter(p=>p.following)]];
+    const cur=tabDefs.find(t=>t[0]===s.tab)||tabDefs[0];
+    const q=s.query.trim().toLowerCase();
+    let rows=cur[2].filter(p=>{const c=content(p);const hay=[c.title,c.summary,PEOPLE[p.author].name,...Object.keys(p.scores).map(id=>(this.stream(id)||{}).name||'')].join(' ').toLowerCase();return(!q||hay.includes(q))&&(!s.stream||p.scores[s.stream]!=null);});
+    const maxS=p=>Math.max(0,...Object.values(p.scores));
+    rows=[...rows].sort((a,b)=>s.sort==='discussed'?nComments(b)-nComments(a):s.sort==='score'?(s.stream?(b.scores[s.stream]||0)-(a.scores[s.stream]||0):maxS(b)-maxS(a)):b.ts-a.ts);
+    const curStream=s.stream&&this.stream(s.stream);
+    const out={
+      isLogin:s.screen==='login',isApp:s.screen!=='login',isList:s.screen==='list',isView:s.screen==='view',isEdit:s.screen==='edit',isSettings:s.screen==='settings',
+      email:s.email,password:s.password,loginError:s.loginError,hasLoginError:!!s.loginError,
+      onEmail:e=>this.setState({email:e.target.value,loginError:''}),onPassword:e=>this.setState({password:e.target.value,loginError:''}),
+      onLogin:()=>this.login(),onLoginKey:e=>{if(e.key==='Enter')this.login();},
+      onLogout:()=>this.go({screen:'login'}),toggleMenu:()=>this.setState({menuOpen:!s.menuOpen}),menuOpen:s.menuOpen,
+      goList:()=>this.go({screen:'list'}),goMine:()=>this.go({screen:'list',tab:'mine',stream:null}),goSettings:()=>this.go({screen:'settings'}),onNew:()=>this.newProposal(),
+      gearBg:s.screen==='settings'?'#fff':'transparent',
+      query:s.query,onQuery:e=>this.setState({query:e.target.value,screen:'list'}),
+      sort:s.sort,onSort:e=>this.setState({sort:e.target.value}),showSummary:!compact,
+      scoreSortLabel:curStream?'Highest '+curStream.name+' score':'Highest score',
+      tabs:tabDefs.map(([id,label,list])=>({label,count:list.length,bg:s.tab===id?'#fff':'transparent',border:s.tab===id?'#e0ddd4':'transparent',weight:s.tab===id?600:400,onClick:()=>this.setState({tab:id})})),
+      streamFilters:activeStreams.map(st=>({name:st.name,color:st.color,count:visible.filter(p=>p.scores[st.id]!=null).length,bg:s.stream===st.id?'#e2ebe4':'transparent',weight:s.stream===st.id?600:400,onClick:()=>this.setState({stream:s.stream===st.id?null:st.id})})),
+      listTitle:curStream?curStream.name:cur[1],
+      listSubtitle:rows.length+(rows.length===1?' proposal':' proposals')+(curStream?' in '+cur[1].toLowerCase():'')+(q?' matching “'+s.query.trim()+'”':''),
+      hasRows:rows.length>0,noRows:rows.length===0,clearFilters:()=>this.setState({query:'',stream:null,tab:'all'}),
+      rows:rows.map(p=>{const c=content(p);const L=latest(p);const ss=this.sortedScores(p);return{title:c.title,summary:c.summary,authorName:PEOPLE[p.author].name,initials:PEOPLE[p.author].initials,updated:'Updated '+p.updated.toLowerCase(),versionLabel:L?'v'+L.v:'Not published',commentCount:nComments(p),
+        scores:ss.map(x=>({name:x.st.name,color:x.st.color,label:this.fmt(x.n),showNum:s.settings.showPublic})),isDraft:!L,hasPending:!!(L&&p.draft&&p.author===ME),hasBadge:!L||!!(p.draft&&p.author===ME),onOpen:()=>this.open(p.id)};}),
+      newComment:s.newComment,onNewComment:e=>this.setState({newComment:e.target.value}),onPostComment:()=>this.postComment(),postBg:s.newComment.trim()?'#2e5e45':'#9fb5a7',
+      toast:s.toast,hasToast:!!s.toast,
+      onSaveDraft:()=>this.saveDraft(),onPublish:()=>this.publish(),
+      onTitle:this.field('title'),onSummary:this.field('summary'),onBody:this.field('body'),onNote:this.field('note'),
+      v:{},ed:{},sd:{isOpen:false}
+    };
+    const p=s.proposals.find(x=>x.id===s.currentId);
+    if(s.screen==='view'&&p){
+      const L=latest(p);const shown=s.viewV!=null?p.versions.find(x=>x.v===s.viewV):(L||p.draft);const mine=p.author===ME;
+      const paras=shown.body.split(/\n\s*\n/).map(t=>t.trim()).filter(Boolean).map(t=>t.startsWith('## ')?{isH:true,isP:false,text:t.slice(3)}:{isH:false,isP:true,text:t});
+      const ss=this.sortedScores(p);const unscored=activeStreams.filter(st=>p.scores[st.id]==null).map(st=>st.name);
+      const who=s.settings.scoredBy;const adjusting=!!s.scoreEdit;
+      out.v={
+        title:shown.title,summary:shown.summary,paras,authorName:PEOPLE[p.author].name,initials:PEOPLE[p.author].initials,
+        metaLine:L?('Published v'+L.v+' · '+L.date+(p.versions.length>1?' · first published '+p.versions[0].date:'')):'Draft · saved '+p.draft.saved,
+        isOld:s.viewV!=null&&L&&s.viewV!==L.v,shownLabel:shown.v?'v'+shown.v:'',shownDate:shown.date,shownNote:shown.note,latestLabel:L?'v'+L.v:'',onLatest:()=>this.setState({viewV:null}),
+        isDraftOnly:!L,isPublished:!!L,canComment:!!L,isMine:mine,notMine:!mine,
+        scoreCaption:'Extracted from the proposal by Jev',
+        scoreRows:ss.map(x=>({name:x.st.name,color:x.st.color,pct:(x.n*10)+'%',value:this.fmt(x.n),suffix:sfx})),
+        hasUnscored:unscored.length>0&&!adjusting,unscored:unscored.join(', '),
+        canAdjust:who!=='author'&&!adjusting,isAdjusting:adjusting,notAdjusting:!adjusting,
+        onAdjust:()=>this.setState({scoreEdit:{...p.scores}}),onCancelAdjust:()=>this.setState({scoreEdit:null}),
+        onSaveAdjust:()=>{const n=s.scoreEdit;this.upd(p.id,x=>({...x,scores:n}));this.setState({scoreEdit:null});this.flash('Scores updated');},
+        adjustItems:adjusting?this.scoreItems(s.scoreEdit,n=>this.setState({scoreEdit:n})):[],
+        statusLine:L?(p.versions.length+(p.versions.length===1?' version':' versions')+' · last published '+L.date):'Not published yet',
+        editLabel:p.draft?'Continue draft':(L?'Edit as new version':'Edit draft'),onEdit:()=>this.editProposal(p.id),
+        followLabel:p.following?'Following ✓':'Follow proposal',onFollow:()=>{this.upd(p.id,x=>({...x,following:!x.following}));this.flash(p.following?'Unfollowed':'You’ll be notified about new versions');},
+        hasPendingMine:!!(mine&&p.draft&&L),draftSaved:p.draft?p.draft.saved:'',noVersions:!L,
+        versions:[...p.versions].reverse().map(x=>{const active=shown===x;return{label:'v'+x.v,date:x.date,note:x.note,isLatest:x===L,bg:active?'#eef3ee':'transparent',dot:active?'#2e5e45':'#c9cec7',onClick:()=>this.setState({viewV:x===L?null:x.v})};}),
+        commentCount:nComments(p),
+        comments:p.comments.map(c=>{const many=c.replies.length>2&&!s.expanded[c.id];const shownR=many?c.replies.slice(-1):c.replies;const hidden=c.replies.length-shownR.length;
+          return{...this.av(c.author),initials:PEOPLE[c.author].initials,authorName:PEOPLE[c.author].name,text:c.text,time:c.time,likes:c.likes,hasLikes:c.likes>0,likeColor:c.liked?'#2e5e45':'#5d665f',
+            onLike:()=>this.like(p.id,c.id),onReply:()=>this.setState({replyTo:c.id,replyText:''}),
+            collapsed:hidden>0,replyCountLabel:hidden+' earlier '+(hidden===1?'reply':'replies'),onExpand:()=>this.setState({expanded:{...s.expanded,[c.id]:true}}),
+            shownReplies:shownR.map(r=>({...this.av(r.author),...this.splitMention(r.text),initials:PEOPLE[r.author].initials,authorName:PEOPLE[r.author].name,time:r.time,likes:r.likes,hasLikes:r.likes>0,likeColor:r.liked?'#2e5e45':'#5d665f',
+              onLike:()=>this.like(p.id,c.id,r.id),onReply:()=>this.setState({replyTo:c.id,replyText:r.author===ME?'':'@'+PEOPLE[r.author].name+' '})})),
+            showReplyBox:s.replyTo===c.id,replyText:s.replyText,onReplyChange:e=>this.setState({replyText:e.target.value}),
+            onReplyKey:e=>{if(e.key==='Enter'){e.preventDefault();this.submitReply(c.id);}if(e.key==='Escape')this.setState({replyTo:null});},
+            onReplySubmit:()=>this.submitReply(c.id),onReplyCancel:()=>this.setState({replyTo:null,replyText:''})};})
+      };
+    }
+    if(s.screen==='edit'&&s.edit){
+      const e=s.edit;const ep=e.id&&s.proposals.find(x=>x.id===e.id);const L=ep&&latest(ep);const n=(ep?ep.versions.length:0)+1;const authorScores=s.settings.scoredBy!=='reviewers';
+      out.ed={title:e.title,summary:e.summary,body:e.body,note:e.note,error:e.error,hasError:!!e.error,
+        scoreItems:this.scoreItems(e.scores,sc=>this.setEdit({scores:sc,error:''})),authorScores,
+        scoreHint:authorScores?(s.settings.scoredBy==='both'?'Pick the streams this affects and suggest a score. Reviewers confirm after publishing.':'Pick the streams this affects and score the impact on each.'):'Pick the streams this affects. Reviewers assign scores after publishing.',
+        heading:!ep?'New proposal':(L?'Editing v'+n+' draft':'Editing draft'),
+        backLabel:ep?'Back to proposal':'Cancel',
+        statusText:!ep?'New · not saved yet':(L?'Published v'+L.v+(ep.draft?' · draft of v'+n+' in progress':''):'Draft · not published'),
+        savedLine:e.saved?'Draft saved '+e.saved:'',
+        publishLabel:L?'Publish v'+n:'Publish',
+        noteLabel:L?'What changed in v'+n+'?':'Version note (optional)',notePlaceholder:L?'e.g. Added cost estimate':'Initial version',
+        publishHint:L?'Required. v1–v'+L.v+' stay readable in version history.':'Publishing creates v1 and opens comments.',
+        hasHistory:!!L,history:L?[...ep.versions].reverse().map(x=>({label:'v'+x.v,note:x.note})):[]};
+    }
+    out.onCancelEdit=()=>{const e=s.edit;if(e&&e.id)this.open(e.id);else this.go({screen:'list'});};
+    if(s.screen==='settings'){
+      const countIn=id=>s.proposals.filter(p=>p.scores[id]!=null).length;
+      out.settingsTabs=[['streams','Streams'],['scoring','Scoring'],['overlaps','Overlaps']].map(([id,label])=>({label,border:s.settingsTab===id?'#2e5e45':'transparent',weight:s.settingsTab===id?600:400,color:s.settingsTab===id?'#18201b':'#5d665f',onClick:()=>this.setState({settingsTab:id})}));
+      out.isStreamsTab=s.settingsTab==='streams';out.isScoringTab=s.settingsTab==='scoring';out.isOverlapTab=s.settingsTab==='overlaps';
+      out.streamsSummary=s.streams.length+' streams · '+activeStreams.length+' active';
+      out.onAddStream=()=>this.openStream(null);
+      out.streamRows=s.streams.map(st=>{const rel=st.related.map(id=>this.stream(id)).filter(Boolean);const c=countIn(st.id);return{name:st.name,desc:st.desc,color:st.color,count:c,related:rel.map(r=>({name:r.name,color:r.color})),noRelated:rel.length===0,opacity:st.active?1:0.5,activeLabel:st.active?'Active':'Inactive',...track(st.active),
+        onToggle:()=>{this.setState(x=>({streams:x.streams.map(y=>y.id===st.id?{...y,active:!y.active}:y)}));this.flash(st.name+(st.active?' deactivated':' activated'));},onEdit:()=>this.openStream(st.id)};});
+      const sc=s.settings;
+      out.scaleOpts=[['5','1 – 5'],['10','0 – 10'],['100','0 – 100']].map(([k,l])=>({label:l,bg:sc.scale===k?'#fff':'transparent',shadow:sc.scale===k?'0 1px 2px rgba(0,0,0,0.12)':'none',weight:sc.scale===k?600:400,onClick:()=>this.setSetting({scale:k})}));
+      out.whoOpts=[['author','Author','Authors score their own proposal against each stream.'],['reviewers','Reviewers','Admins and assigned reviewers set all scores.'],['both','Author, then reviewers','Authors suggest scores; reviewers confirm or adjust them.']].map(([k,t,d])=>({title:t,desc:d,border:sc.scoredBy===k?'#2e5e45':'#e0ddd4',bg:sc.scoredBy===k?'#f3f7f3':'#fff',ring:sc.scoredBy===k?'#2e5e45':'#b9b6ac',dot:sc.scoredBy===k?'#2e5e45':'transparent',onClick:()=>this.setSetting({scoredBy:k})}));
+      out.scoringToggles=[['requireStream','Require at least one stream to publish','Proposals without a stream can still be saved as drafts.'],['showPublic','Show scores on the public listing','When off, the listing shows stream names only. Scores stay visible on each proposal.']].map(([k,t,d])=>({title:t,desc:d,...track(sc[k]),onToggle:()=>this.setSetting({[k]:!sc[k]})}));
+      const both=(a,b)=>published.filter(p=>p.scores[a]!=null&&p.scores[b]!=null).length;
+      let mx=1;activeStreams.forEach(a=>activeStreams.forEach(b=>{if(a.id!==b.id)mx=Math.max(mx,both(a.id,b.id));}));
+      out.matrixCols=activeStreams.map(st=>({name:st.name,color:st.color}));
+      out.matrixRows=activeStreams.map(a=>({name:a.name,color:a.color,cells:activeStreams.map(b=>{if(a.id===b.id)return{label:both(a.id,a.id),bg:'#f3f2ec',color:'#5d665f',shadow:'none',weight:500};const c=both(a.id,b.id);const al=c?0.12+0.7*c/mx:0;const rel=a.related.includes(b.id);return{label:c||'',bg:c?'rgba(46,94,69,'+al.toFixed(2)+')':'#fbfaf7',color:al>0.5?'#fff':'#18201b',shadow:rel?'inset 0 0 0 2px #18201b':'none',weight:600};})}));
+      const sug=[];activeStreams.forEach((a,i)=>activeStreams.slice(i+1).forEach(b=>{const c=both(a.id,b.id);if(c>=2&&!a.related.includes(b.id))sug.push({a:a.name,b:b.name,c,countLabel:c+' shared proposals',onMark:()=>this.link(a.id,b.id)});}));
+      out.suggestions=sug.sort((x,y)=>y.c-x.c);out.noSuggestions=sug.length===0;
+    }
+    const d=s.streamDraft;
+    if(d){const c=d.id?s.proposals.filter(p=>p.scores[d.id]!=null).length:0;
+      out.sd={isOpen:true,title:d.id?'Edit stream':'New stream',name:d.name,desc:d.desc,error:d.error,hasError:!!d.error,...track(d.active),
+        onName:e=>this.setSD({name:e.target.value,error:''}),onDesc:e=>this.setSD({desc:e.target.value}),onToggleActive:()=>this.setSD({active:!d.active}),
+        colors:COLORS.map(hex=>({hex,ring:d.color===hex?'0 0 0 2px #fff, 0 0 0 4px '+hex:'none',onClick:()=>this.setSD({color:hex})})),
+        others:s.streams.filter(x=>x.id!==d.id).map(x=>{const on=d.related.includes(x.id);return{name:x.name,color:x.color,bg:on?'#eef3ee':'#fff',border:on?'#2e5e45':'#e0ddd4',weight:on?600:400,onClick:()=>this.setSD({related:on?d.related.filter(r=>r!==x.id):[...d.related,x.id]})};}),
+        canDelete:!!d.id&&c===0,inUse:c>0,inUseLabel:'Used by '+c+(c===1?' proposal':' proposals')+'. Deactivate instead of deleting.',
+        onDelete:()=>this.deleteStream(),onSave:()=>this.saveStream(),onCancel:()=>this.setState({streamDraft:null})};}
+    return out;
+  }
+}
+</script>
+</body>
+</html>

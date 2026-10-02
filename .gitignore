@@ -1,0 +1,6 @@
+node_modules/
+.env
+app/.design-tmp/
+app/test-results/
+app/playwright-report/
+app/tests/visual/actual/

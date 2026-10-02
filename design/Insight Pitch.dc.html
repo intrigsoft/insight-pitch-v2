@@ -1,0 +1,500 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<title>Insight Pitch</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600;1,6..72,400&display=swap" rel="stylesheet">
+<style>body{margin:0;background:#f5f4ef;-webkit-font-smoothing:antialiased}a{color:#2e5e45}a:hover{color:#1f3d2e}input,textarea,select,button{font-family:inherit;font-size:inherit;color:inherit}::placeholder{color:#8f958f}@keyframes ipToast{from{opacity:0;transform:translate(-50%,8px)}to{opacity:1;transform:translate(-50%,0)}}</style>
+</helmet>
+<div style="min-height:100vh;background:#f5f4ef;color:#18201b;font-family:'Geist',system-ui,sans-serif;font-size:15px;line-height:1.5">
+
+<sc-if value="{{ isLogin }}" hint-placeholder-val="{{ true }}">
+<div data-screen-label="Login" style="min-height:100vh;display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,420px),1fr))">
+  <div style="background:#1f3d2e;color:#f1efe6;padding:48px 56px;display:flex;flex-direction:column;justify-content:space-between;gap:64px;min-height:320px">
+    <div style="display:flex;align-items:baseline;gap:6px;font-size:22px"><span style="font-family:'Newsreader',serif;font-style:italic;font-size:26px">Insight</span><span style="font-weight:600;letter-spacing:-0.01em">Pitch</span></div>
+    <div style="display:flex;flex-direction:column;gap:20px;max-width:520px">
+      <h1 style="margin:0;font-family:'Newsreader',serif;font-weight:400;font-size:56px;line-height:1.05;letter-spacing:-0.02em;text-wrap:balance">Every good decision starts as a proposal.</h1>
+      <p style="margin:0;font-size:17px;color:#c9d3cb;max-width:420px;text-wrap:pretty">Draft ideas in private, publish when they're ready, and keep every version on the record while your team discusses them.</p>
+    </div>
+    <div style="font-size:13px;color:#a9b8ad">© 2026 Insight Pitch</div>
+  </div>
+  <div style="display:flex;align-items:center;justify-content:center;padding:48px 24px;background:#f5f4ef">
+    <div style="width:100%;max-width:380px;display:flex;flex-direction:column;gap:22px">
+      <div style="display:flex;flex-direction:column;gap:6px">
+        <h2 style="margin:0;font-family:'Newsreader',serif;font-weight:500;font-size:34px;letter-spacing:-0.01em">Sign in</h2>
+        <p style="margin:0;color:#5d665f">Use your work account to continue.</p>
+      </div>
+      <label style="display:flex;flex-direction:column;gap:6px;font-size:13px;font-weight:500">Work email
+        <input type="email" value="{{ email }}" onChange="{{ onEmail }}" style="height:44px;padding:0 14px;border:1px solid #d9d6cc;border-radius:10px;background:#fff;font-size:15px;font-weight:400;outline:none" style-focus="border-color:#2e5e45;box-shadow:0 0 0 3px #dbe7df">
+      </label>
+      <label style="display:flex;flex-direction:column;gap:6px;font-size:13px;font-weight:500">
+        <span style="display:flex;justify-content:space-between"><span>Password</span><a href="#" style="font-weight:400;text-decoration:none">Forgot?</a></span>
+        <input type="password" value="{{ password }}" onChange="{{ onPassword }}" onKeyDown="{{ onLoginKey }}" style="height:44px;padding:0 14px;border:1px solid #d9d6cc;border-radius:10px;background:#fff;font-size:15px;font-weight:400;outline:none" style-focus="border-color:#2e5e45;box-shadow:0 0 0 3px #dbe7df">
+      </label>
+      <sc-if value="{{ hasLoginError }}" hint-placeholder-val="{{ false }}"><div style="font-size:13px;color:#a3322a">{{ loginError }}</div></sc-if>
+      <button onClick="{{ onLogin }}" style="height:46px;border:none;border-radius:10px;background:#2e5e45;color:#fff;font-weight:600;cursor:pointer" style-hover="background:#234a36">Sign in</button>
+      <div style="display:flex;align-items:center;gap:12px;color:#8a918b;font-size:12px"><div style="flex:1;height:1px;background:#dedbd2"></div>or<div style="flex:1;height:1px;background:#dedbd2"></div></div>
+      <button onClick="{{ onLogin }}" style="height:46px;border:1px solid #d9d6cc;border-radius:10px;background:#fff;font-weight:500;cursor:pointer" style-hover="background:#fbfaf6">Continue with SSO</button>
+      <p style="margin:0;font-size:13px;color:#5d665f;text-align:center">New to Insight Pitch? <a href="#">Request access</a></p>
+    </div>
+  </div>
+</div>
+</sc-if>
+
+<sc-if value="{{ isApp }}" hint-placeholder-val="{{ false }}">
+<header style="position:sticky;top:0;z-index:20;background:rgba(245,244,239,0.92);backdrop-filter:blur(10px);border-bottom:1px solid #e4e2da">
+  <div style="max-width:1200px;margin:0 auto;padding:0 24px;height:64px;display:flex;align-items:center;gap:24px">
+    <button onClick="{{ goList }}" style="display:flex;align-items:baseline;gap:5px;border:none;background:none;padding:0;cursor:pointer;color:#18201b;flex:none"><span style="font-family:'Newsreader',serif;font-style:italic;font-size:23px">Insight</span><span style="font-weight:600;font-size:19px;letter-spacing:-0.01em">Pitch</span></button>
+    <div style="flex:1;max-width:460px;position:relative;display:flex;align-items:center">
+      <span style="position:absolute;left:12px;color:#6b736d;display:flex"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"></circle><path d="m20 20-3.5-3.5"></path></svg></span>
+      <input value="{{ query }}" onChange="{{ onQuery }}" placeholder="Search proposals, people, topics" style="width:100%;height:40px;padding:0 14px 0 36px;border:1px solid #e0ddd4;border-radius:999px;background:#fff;outline:none;box-sizing:border-box" style-focus="border-color:#2e5e45;box-shadow:0 0 0 3px #dbe7df">
+    </div>
+    <div style="flex:1"></div>
+    <button onClick="{{ onNew }}" style="display:flex;align-items:center;gap:6px;height:38px;padding:0 16px;border:none;border-radius:999px;background:#2e5e45;color:#fff;font-weight:600;font-size:14px;cursor:pointer;flex:none" style-hover="background:#234a36"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14"></path></svg>New proposal</button>
+    <div style="position:relative;flex:none">
+      <button onClick="{{ toggleMenu }}" style="width:38px;height:38px;border-radius:50%;border:none;background:#1f3d2e;color:#f1efe6;font-weight:600;font-size:13px;cursor:pointer">MC</button>
+      <sc-if value="{{ menuOpen }}" hint-placeholder-val="{{ false }}">
+        <div style="position:absolute;right:0;top:46px;width:220px;background:#fff;border:1px solid #e4e2da;border-radius:12px;box-shadow:0 12px 32px rgba(24,32,27,0.12);padding:6px;display:flex;flex-direction:column">
+          <div style="padding:10px 12px;border-bottom:1px solid #efede6;margin-bottom:4px"><div style="font-weight:600">Maya Chen</div><div style="font-size:13px;color:#5d665f">{{ email }}</div></div>
+          <button onClick="{{ goMine }}" style="text-align:left;padding:9px 12px;border:none;background:none;border-radius:8px;cursor:pointer" style-hover="background:#f3f2ec">My proposals</button>
+          <button onClick="{{ onLogout }}" style="text-align:left;padding:9px 12px;border:none;background:none;border-radius:8px;cursor:pointer;color:#a3322a" style-hover="background:#f3f2ec">Sign out</button>
+        </div>
+      </sc-if>
+    </div>
+  </div>
+</header>
+</sc-if>
+
+<sc-if value="{{ isList }}" hint-placeholder-val="{{ false }}">
+<main data-screen-label="Proposals" style="max-width:1200px;margin:0 auto;padding:40px 24px 80px;display:flex;flex-wrap:wrap;gap:40px;align-items:flex-start">
+  <aside style="flex:0 0 210px;display:flex;flex-direction:column;gap:28px">
+    <div style="display:flex;flex-direction:column;gap:2px">
+      <div style="font-size:11px;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;color:#6b736d;padding:0 12px 8px">Library</div>
+      <sc-for list="{{ tabs }}" as="t" hint-placeholder-count="3">
+        <button onClick="{{ t.onClick }}" style="display:flex;justify-content:space-between;align-items:center;padding:9px 12px;border-radius:9px;border:1px solid {{ t.border }};background:{{ t.bg }};font-weight:{{ t.weight }};cursor:pointer;text-align:left"><span>{{ t.label }}</span><span style="font-size:12px;color:#6b736d;font-weight:500">{{ t.count }}</span></button>
+      </sc-for>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:2px">
+      <div style="font-size:11px;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;color:#6b736d;padding:0 12px 8px">Topics</div>
+      <sc-for list="{{ tagList }}" as="t" hint-placeholder-count="5">
+        <button onClick="{{ t.onClick }}" style="display:flex;justify-content:space-between;align-items:center;padding:7px 12px;border-radius:9px;border:none;background:{{ t.bg }};color:{{ t.color }};font-weight:{{ t.weight }};cursor:pointer;text-align:left;font-size:14px" style-hover="background:#ecebe4"><span># {{ t.name }}</span><span style="font-size:12px;opacity:0.75">{{ t.count }}</span></button>
+      </sc-for>
+    </div>
+  </aside>
+  <section style="flex:1 1 560px;min-width:0;display:flex;flex-direction:column;gap:20px">
+    <div style="display:flex;justify-content:space-between;align-items:flex-end;gap:16px;flex-wrap:wrap">
+      <div style="display:flex;flex-direction:column;gap:4px">
+        <h1 style="margin:0;font-family:'Newsreader',serif;font-weight:500;font-size:40px;line-height:1.1;letter-spacing:-0.02em">{{ listTitle }}</h1>
+        <div style="color:#5d665f;font-size:14px">{{ listSubtitle }}</div>
+      </div>
+      <label style="display:flex;align-items:center;gap:8px;font-size:13px;color:#5d665f">Sort
+        <select value="{{ sort }}" onChange="{{ onSort }}" style="height:34px;padding:0 10px;border:1px solid #e0ddd4;border-radius:8px;background:#fff;font-size:13px;cursor:pointer">
+          <option value="recent">Recently updated</option>
+          <option value="discussed">Most discussed</option>
+        </select>
+      </label>
+    </div>
+    <sc-if value="{{ hasRows }}" hint-placeholder-val="{{ true }}">
+    <div style="display:grid;gap:1px;background:#e7e5dd;border:1px solid #e7e5dd;border-radius:14px;overflow:hidden">
+      <sc-for list="{{ rows }}" as="r" hint-placeholder-count="5">
+        <div onClick="{{ r.onOpen }}" style="background:#fff;padding:22px 26px;cursor:pointer;display:flex;flex-direction:column;gap:8px" style-hover="background:#fbfaf6">
+          <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:12px">
+            <sc-if value="{{ r.isDraft }}"><span style="padding:2px 8px;border-radius:999px;background:#f6ecd6;color:#7a5410;font-weight:600">Draft</span></sc-if>
+            <sc-if value="{{ r.hasPending }}"><span style="padding:2px 8px;border-radius:999px;background:#f6ecd6;color:#7a5410;font-weight:600">Unpublished changes</span></sc-if>
+            <sc-for list="{{ r.tags }}" as="tg"><span style="color:#2e5e45;font-weight:500"># {{ tg.name }}</span></sc-for>
+          </div>
+          <h2 style="margin:0;font-family:'Newsreader',serif;font-weight:500;font-size:23px;line-height:1.25;letter-spacing:-0.01em;text-wrap:pretty">{{ r.title }}</h2>
+          <sc-if value="{{ showSummary }}" hint-placeholder-val="{{ true }}"><p style="margin:0;color:#4f5751;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;text-wrap:pretty">{{ r.summary }}</p></sc-if>
+          <div style="display:flex;align-items:center;gap:10px;font-size:13px;color:#5d665f;margin-top:4px;flex-wrap:wrap">
+            <span style="width:24px;height:24px;border-radius:50%;background:#e2ebe4;color:#234a36;font-size:10px;font-weight:600;display:flex;align-items:center;justify-content:center">{{ r.initials }}</span>
+            <span style="color:#18201b;font-weight:500">{{ r.authorName }}</span>
+            <span>·</span><span>{{ r.updated }}</span>
+            <span>·</span><span>{{ r.versionLabel }}</span>
+            <span style="display:flex;align-items:center;gap:5px;margin-left:auto"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.6A8 8 0 1 1 21 12z"></path></svg>{{ r.commentCount }}</span>
+          </div>
+        </div>
+      </sc-for>
+    </div>
+    </sc-if>
+    <sc-if value="{{ noRows }}" hint-placeholder-val="{{ false }}">
+      <div style="border:1px dashed #d4d1c7;border-radius:14px;padding:56px 24px;text-align:center;display:flex;flex-direction:column;align-items:center;gap:12px">
+        <div style="font-family:'Newsreader',serif;font-size:24px">No proposals match</div>
+        <div style="color:#5d665f">Try a different search or clear your filters.</div>
+        <button onClick="{{ clearFilters }}" style="height:36px;padding:0 16px;border:1px solid #d9d6cc;border-radius:999px;background:#fff;cursor:pointer;font-weight:500">Clear filters</button>
+      </div>
+    </sc-if>
+  </section>
+</main>
+</sc-if>
+
+<sc-if value="{{ isView }}" hint-placeholder-val="{{ false }}">
+<main data-screen-label="Proposal" style="max-width:1200px;margin:0 auto;padding:28px 24px 96px;display:flex;flex-direction:column;gap:24px">
+  <button onClick="{{ goList }}" style="align-self:flex-start;display:flex;align-items:center;gap:6px;border:none;background:none;padding:4px 0;color:#5d665f;cursor:pointer;font-size:14px" style-hover="color:#18201b"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M11 18l-6-6 6-6"></path></svg>All proposals</button>
+  <div style="display:flex;flex-wrap:wrap;gap:56px;align-items:flex-start">
+    <article style="flex:1 1 560px;min-width:0;max-width:740px;display:flex;flex-direction:column;gap:22px">
+      <sc-if value="{{ v.isOld }}" hint-placeholder-val="{{ false }}">
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;padding:12px 16px;border-radius:10px;background:#eef1ea;border:1px solid #d7dfd5;font-size:14px">
+          <span>You're viewing <b>{{ v.shownLabel }}</b> from {{ v.shownDate }}. {{ v.shownNote }}.</span>
+          <button onClick="{{ v.onLatest }}" style="border:none;background:none;color:#2e5e45;font-weight:600;cursor:pointer;padding:0">View latest ({{ v.latestLabel }}) →</button>
+        </div>
+      </sc-if>
+      <sc-if value="{{ v.isDraftOnly }}" hint-placeholder-val="{{ false }}">
+        <div style="padding:12px 16px;border-radius:10px;background:#f6ecd6;color:#5e410c;font-size:14px">This proposal is a draft. Only you can see it until it's published.</div>
+      </sc-if>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;font-size:13px">
+        <sc-for list="{{ v.tags }}" as="tg"><span style="color:#2e5e45;font-weight:500"># {{ tg.name }}</span></sc-for>
+      </div>
+      <h1 style="margin:0;font-family:'Newsreader',serif;font-weight:500;font-size:46px;line-height:1.08;letter-spacing:-0.02em;text-wrap:balance">{{ v.title }}</h1>
+      <p style="margin:0;font-family:'Newsreader',serif;font-style:italic;font-size:21px;line-height:1.45;color:#4f5751;text-wrap:pretty">{{ v.summary }}</p>
+      <div style="display:flex;align-items:center;gap:12px;padding:14px 0;border-top:1px solid #e4e2da;border-bottom:1px solid #e4e2da">
+        <span style="width:38px;height:38px;border-radius:50%;background:#e2ebe4;color:#234a36;font-size:13px;font-weight:600;display:flex;align-items:center;justify-content:center;flex:none">{{ v.initials }}</span>
+        <div style="display:flex;flex-direction:column;line-height:1.3"><span style="font-weight:600">{{ v.authorName }}</span><span style="font-size:13px;color:#5d665f">{{ v.metaLine }}</span></div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:18px;font-family:'Newsreader',serif;font-size:19px;line-height:1.65;color:#232a25">
+        <sc-for list="{{ v.paras }}" as="pa" hint-placeholder-count="4">
+          <sc-if value="{{ pa.isH }}"><h3 style="margin:14px 0 -6px;font-family:'Geist',sans-serif;font-size:13px;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;color:#2e5e45">{{ pa.text }}</h3></sc-if>
+          <sc-if value="{{ pa.isP }}"><p style="margin:0;text-wrap:pretty">{{ pa.text }}</p></sc-if>
+        </sc-for>
+      </div>
+
+      <section style="margin-top:36px;padding-top:28px;border-top:1px solid #e4e2da;display:flex;flex-direction:column;gap:22px">
+        <h2 style="margin:0;font-family:'Newsreader',serif;font-weight:500;font-size:28px">Discussion <span style="color:#6b736d;font-size:20px">{{ v.commentCount }}</span></h2>
+        <sc-if value="{{ v.isDraftOnly }}" hint-placeholder-val="{{ false }}">
+          <div style="color:#5d665f;font-size:14px">Comments open once the proposal is published.</div>
+        </sc-if>
+        <sc-if value="{{ v.canComment }}" hint-placeholder-val="{{ true }}">
+          <div style="display:flex;gap:12px;align-items:flex-start">
+            <span style="width:38px;height:38px;border-radius:50%;background:#1f3d2e;color:#f1efe6;font-size:13px;font-weight:600;display:flex;align-items:center;justify-content:center;flex:none">MC</span>
+            <div style="flex:1;display:flex;flex-direction:column;gap:10px;background:#fff;border:1px solid #e0ddd4;border-radius:14px;padding:12px 14px">
+              <textarea value="{{ newComment }}" onChange="{{ onNewComment }}" placeholder="Add to the discussion…" rows="2" style="border:none;outline:none;resize:vertical;background:transparent;font-size:15px;line-height:1.5;min-height:44px"></textarea>
+              <div style="display:flex;justify-content:flex-end"><button onClick="{{ onPostComment }}" style="height:34px;padding:0 16px;border:none;border-radius:999px;background:{{ postBg }};color:#fff;font-weight:600;font-size:13px;cursor:pointer">Post comment</button></div>
+            </div>
+          </div>
+        </sc-if>
+        <div style="display:flex;flex-direction:column;gap:22px">
+          <sc-for list="{{ v.comments }}" as="c" hint-placeholder-count="3">
+            <div style="display:flex;flex-direction:column;gap:12px">
+              <div style="display:flex;gap:12px;align-items:flex-start">
+                <span style="width:38px;height:38px;border-radius:50%;background:{{ c.avBg }};color:{{ c.avColor }};font-size:13px;font-weight:600;display:flex;align-items:center;justify-content:center;flex:none">{{ c.initials }}</span>
+                <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:5px">
+                  <div style="align-self:flex-start;max-width:100%;background:#ecebe4;border-radius:16px;padding:10px 14px;box-sizing:border-box">
+                    <div style="font-weight:600;font-size:14px">{{ c.authorName }}</div>
+                    <div style="text-wrap:pretty">{{ c.text }}</div>
+                  </div>
+                  <div style="display:flex;align-items:center;gap:14px;font-size:12.5px;color:#5d665f;padding-left:14px">
+                    <span>{{ c.time }}</span>
+                    <button onClick="{{ c.onLike }}" style="border:none;background:none;padding:0;cursor:pointer;font-weight:600;color:{{ c.likeColor }}">Like</button>
+                    <button onClick="{{ c.onReply }}" style="border:none;background:none;padding:0;cursor:pointer;font-weight:600;color:#5d665f">Reply</button>
+                    <sc-if value="{{ c.hasLikes }}"><span style="display:flex;align-items:center;gap:4px;margin-left:auto"><svg width="13" height="13" viewBox="0 0 24 24" fill="#2e5e45"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1-1.1a5.5 5.5 0 0 0-7.8 7.8L12 21l8.8-8.6a5.5 5.5 0 0 0 0-7.8z"></path></svg>{{ c.likes }}</span></sc-if>
+                  </div>
+                </div>
+              </div>
+              <div style="margin-left:50px;display:flex;flex-direction:column;gap:12px;border-left:2px solid #e4e2da;padding-left:16px">
+                <sc-if value="{{ c.hasReplies }}"><sc-if value="{{ c.collapsed }}">
+                  <button onClick="{{ c.onExpand }}" style="align-self:flex-start;border:none;background:none;padding:0;cursor:pointer;font-weight:600;font-size:13px;color:#2e5e45">View {{ c.replyCountLabel }}</button>
+                </sc-if></sc-if>
+                <sc-for list="{{ c.shownReplies }}" as="rp">
+                  <div style="display:flex;gap:10px;align-items:flex-start">
+                    <span style="width:30px;height:30px;border-radius:50%;background:{{ rp.avBg }};color:{{ rp.avColor }};font-size:11px;font-weight:600;display:flex;align-items:center;justify-content:center;flex:none">{{ rp.initials }}</span>
+                    <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:5px">
+                      <div style="align-self:flex-start;max-width:100%;background:#ecebe4;border-radius:16px;padding:9px 13px;box-sizing:border-box;font-size:14.5px">
+                        <div style="font-weight:600;font-size:13.5px">{{ rp.authorName }}</div>
+                        <div style="text-wrap:pretty"><sc-if value="{{ rp.hasMention }}"><span style="color:#2e5e45;font-weight:600">{{ rp.mention }} </span></sc-if>{{ rp.body }}</div>
+                      </div>
+                      <div style="display:flex;align-items:center;gap:14px;font-size:12.5px;color:#5d665f;padding-left:13px">
+                        <span>{{ rp.time }}</span>
+                        <button onClick="{{ rp.onLike }}" style="border:none;background:none;padding:0;cursor:pointer;font-weight:600;color:{{ rp.likeColor }}">Like</button>
+                        <button onClick="{{ rp.onReply }}" style="border:none;background:none;padding:0;cursor:pointer;font-weight:600;color:#5d665f">Reply</button>
+                        <sc-if value="{{ rp.hasLikes }}"><span style="display:flex;align-items:center;gap:4px;margin-left:auto"><svg width="13" height="13" viewBox="0 0 24 24" fill="#2e5e45"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1-1.1a5.5 5.5 0 0 0-7.8 7.8L12 21l8.8-8.6a5.5 5.5 0 0 0 0-7.8z"></path></svg>{{ rp.likes }}</span></sc-if>
+                      </div>
+                    </div>
+                  </div>
+                </sc-for>
+                <sc-if value="{{ c.showReplyBox }}">
+                  <div style="display:flex;gap:10px;align-items:center">
+                    <span style="width:30px;height:30px;border-radius:50%;background:#1f3d2e;color:#f1efe6;font-size:11px;font-weight:600;display:flex;align-items:center;justify-content:center;flex:none">MC</span>
+                    <input autoFocus="{{ true }}" value="{{ c.replyText }}" onChange="{{ c.onReplyChange }}" onKeyDown="{{ c.onReplyKey }}" placeholder="Write a reply… (Enter to send)" style="flex:1;min-width:0;height:38px;padding:0 14px;border:1px solid #e0ddd4;border-radius:999px;background:#fff;outline:none" style-focus="border-color:#2e5e45;box-shadow:0 0 0 3px #dbe7df">
+                    <button onClick="{{ c.onReplySubmit }}" style="height:36px;padding:0 14px;border:none;border-radius:999px;background:#2e5e45;color:#fff;font-weight:600;font-size:13px;cursor:pointer">Reply</button>
+                    <button onClick="{{ c.onReplyCancel }}" style="border:none;background:none;color:#5d665f;cursor:pointer;font-size:13px">Cancel</button>
+                  </div>
+                </sc-if>
+              </div>
+            </div>
+          </sc-for>
+        </div>
+      </section>
+    </article>
+
+    <aside style="flex:0 1 300px;min-width:260px;position:sticky;top:88px;display:flex;flex-direction:column;gap:16px">
+      <div style="background:#fff;border:1px solid #e4e2da;border-radius:14px;padding:20px;display:flex;flex-direction:column;gap:14px">
+        <div style="display:flex;align-items:center;justify-content:space-between">
+          <span style="font-size:11px;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;color:#6b736d">Status</span>
+          <sc-if value="{{ v.isDraftOnly }}"><span style="padding:2px 9px;border-radius:999px;background:#f6ecd6;color:#7a5410;font-weight:600;font-size:12px">Draft</span></sc-if>
+          <sc-if value="{{ v.isPublished }}"><span style="padding:2px 9px;border-radius:999px;background:#e2ebe4;color:#234a36;font-weight:600;font-size:12px">Published</span></sc-if>
+        </div>
+        <div style="font-size:14px;color:#4f5751">{{ v.statusLine }}</div>
+        <sc-if value="{{ v.isMine }}">
+          <button onClick="{{ v.onEdit }}" style="height:40px;border:none;border-radius:10px;background:#2e5e45;color:#fff;font-weight:600;cursor:pointer" style-hover="background:#234a36">{{ v.editLabel }}</button>
+        </sc-if>
+        <sc-if value="{{ v.notMine }}">
+          <button onClick="{{ v.onFollow }}" style="height:40px;border:1px solid #d9d6cc;border-radius:10px;background:#fff;font-weight:500;cursor:pointer" style-hover="background:#fbfaf6">{{ v.followLabel }}</button>
+        </sc-if>
+      </div>
+      <div style="background:#fff;border:1px solid #e4e2da;border-radius:14px;padding:20px 12px 12px;display:flex;flex-direction:column;gap:6px">
+        <div style="font-size:11px;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;color:#6b736d;padding:0 8px 8px">Version history</div>
+        <sc-if value="{{ v.hasPendingMine }}">
+          <button onClick="{{ v.onEdit }}" style="display:flex;gap:12px;align-items:flex-start;padding:10px 8px;border:none;border-radius:10px;background:#fbf6ea;cursor:pointer;text-align:left">
+            <span style="width:9px;height:9px;border-radius:50%;background:#c9952e;margin-top:6px;flex:none"></span>
+            <span style="display:flex;flex-direction:column;gap:2px"><span style="font-weight:600;font-size:14px">Unpublished draft</span><span style="font-size:13px;color:#5d665f">Saved {{ v.draftSaved }} · Continue editing</span></span>
+          </button>
+        </sc-if>
+        <sc-for list="{{ v.versions }}" as="vr" hint-placeholder-count="3">
+          <button onClick="{{ vr.onClick }}" style="display:flex;gap:12px;align-items:flex-start;padding:10px 8px;border:none;border-radius:10px;background:{{ vr.bg }};cursor:pointer;text-align:left" style-hover="background:#f3f5f0">
+            <span style="width:9px;height:9px;border-radius:50%;background:{{ vr.dot }};margin-top:6px;flex:none"></span>
+            <span style="display:flex;flex-direction:column;gap:2px;min-width:0">
+              <span style="display:flex;align-items:center;gap:8px;font-size:14px"><b>{{ vr.label }}</b><span style="color:#5d665f">{{ vr.date }}</span><sc-if value="{{ vr.isLatest }}"><span style="font-size:11px;font-weight:600;color:#2e5e45;background:#e2ebe4;padding:1px 7px;border-radius:999px">Latest</span></sc-if></span>
+              <span style="font-size:13px;color:#4f5751;text-wrap:pretty">{{ vr.note }}</span>
+            </span>
+          </button>
+        </sc-for>
+        <sc-if value="{{ v.noVersions }}"><div style="font-size:13px;color:#5d665f;padding:0 8px 8px">Nothing published yet. v1 is created when you publish.</div></sc-if>
+      </div>
+    </aside>
+  </div>
+</main>
+</sc-if>
+
+<sc-if value="{{ isEdit }}" hint-placeholder-val="{{ false }}">
+<main data-screen-label="Editor" style="max-width:1200px;margin:0 auto;padding:28px 24px 80px;display:flex;flex-direction:column;gap:22px">
+  <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+    <button onClick="{{ onCancelEdit }}" style="display:flex;align-items:center;gap:6px;border:none;background:none;padding:4px 0;color:#5d665f;cursor:pointer;font-size:14px" style-hover="color:#18201b"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M11 18l-6-6 6-6"></path></svg>{{ ed.backLabel }}</button>
+    <span style="color:#c4c1b7">/</span>
+    <span style="font-size:14px;color:#4f5751">{{ ed.heading }}</span>
+    <div style="flex:1"></div>
+    <span style="font-size:13px;color:#6b736d">{{ ed.savedLine }}</span>
+    <button onClick="{{ onSaveDraft }}" style="height:38px;padding:0 16px;border:1px solid #d9d6cc;border-radius:999px;background:#fff;font-weight:500;font-size:14px;cursor:pointer" style-hover="background:#fbfaf6">Save draft</button>
+    <button onClick="{{ onPublish }}" style="height:38px;padding:0 18px;border:none;border-radius:999px;background:#2e5e45;color:#fff;font-weight:600;font-size:14px;cursor:pointer" style-hover="background:#234a36">{{ ed.publishLabel }}</button>
+  </div>
+  <div style="display:flex;flex-wrap:wrap;gap:28px;align-items:flex-start">
+    <div style="flex:1 1 560px;min-width:0;background:#fff;border:1px solid #e4e2da;border-radius:16px;padding:40px 44px;display:flex;flex-direction:column;gap:14px;box-sizing:border-box">
+      <textarea value="{{ ed.title }}" onChange="{{ onTitle }}" placeholder="Proposal title" rows="2" style="border:none;outline:none;resize:none;font-family:'Newsreader',serif;font-weight:500;font-size:40px;line-height:1.12;letter-spacing:-0.02em;padding:0;background:transparent"></textarea>
+      <textarea value="{{ ed.summary }}" onChange="{{ onSummary }}" placeholder="One or two sentences that sum up the ask" rows="2" style="border:none;outline:none;resize:none;font-family:'Newsreader',serif;font-style:italic;font-size:20px;line-height:1.45;color:#4f5751;padding:0;background:transparent"></textarea>
+      <div style="height:1px;background:#ecebe4;margin:6px 0"></div>
+      <textarea value="{{ ed.body }}" onChange="{{ onBody }}" placeholder="Write your proposal. Start a line with ## to add a section heading." style="border:none;outline:none;resize:vertical;min-height:460px;font-family:'Newsreader',serif;font-size:18px;line-height:1.65;color:#232a25;padding:0;background:transparent"></textarea>
+    </div>
+    <aside style="flex:0 1 300px;min-width:260px;position:sticky;top:88px;display:flex;flex-direction:column;gap:16px">
+      <div style="background:#fff;border:1px solid #e4e2da;border-radius:14px;padding:20px;display:flex;flex-direction:column;gap:18px">
+        <div style="display:flex;flex-direction:column;gap:4px">
+          <span style="font-size:11px;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;color:#6b736d">Status</span>
+          <span style="font-size:14px">{{ ed.statusText }}</span>
+        </div>
+        <label style="display:flex;flex-direction:column;gap:6px;font-size:13px;font-weight:500">Topics
+          <input value="{{ ed.tags }}" onChange="{{ onTags }}" placeholder="Research, Product" style="height:38px;padding:0 12px;border:1px solid #e0ddd4;border-radius:9px;background:#fff;font-weight:400;font-size:14px;outline:none" style-focus="border-color:#2e5e45;box-shadow:0 0 0 3px #dbe7df">
+          <span style="font-weight:400;color:#6b736d;font-size:12px">Separate with commas.</span>
+        </label>
+        <label style="display:flex;flex-direction:column;gap:6px;font-size:13px;font-weight:500">{{ ed.noteLabel }}
+          <textarea value="{{ ed.note }}" onChange="{{ onNote }}" placeholder="{{ ed.notePlaceholder }}" rows="3" style="padding:10px 12px;border:1px solid #e0ddd4;border-radius:9px;background:#fff;font-weight:400;font-size:14px;line-height:1.45;outline:none;resize:vertical" style-focus="border-color:#2e5e45;box-shadow:0 0 0 3px #dbe7df"></textarea>
+          <span style="font-weight:400;color:#6b736d;font-size:12px">{{ ed.publishHint }}</span>
+        </label>
+        <sc-if value="{{ ed.hasError }}"><div style="font-size:13px;color:#a3322a">{{ ed.error }}</div></sc-if>
+      </div>
+      <sc-if value="{{ ed.hasHistory }}">
+        <div style="background:#fff;border:1px solid #e4e2da;border-radius:14px;padding:18px 20px;display:flex;flex-direction:column;gap:10px">
+          <span style="font-size:11px;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;color:#6b736d">Published versions</span>
+          <sc-for list="{{ ed.history }}" as="h">
+            <div style="display:flex;gap:10px;font-size:13px"><b style="flex:none">{{ h.label }}</b><span style="color:#4f5751">{{ h.note }}</span></div>
+          </sc-for>
+        </div>
+      </sc-if>
+    </aside>
+  </div>
+</main>
+</sc-if>
+
+<sc-if value="{{ hasToast }}" hint-placeholder-val="{{ false }}">
+  <div style="position:fixed;left:50%;bottom:28px;transform:translateX(-50%);background:#1f3d2e;color:#f1efe6;padding:11px 20px;border-radius:999px;font-size:14px;font-weight:500;box-shadow:0 10px 30px rgba(24,32,27,0.25);animation:ipToast .25s ease-out;z-index:50">{{ toast }}</div>
+</sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;startScreen&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;login&quot;,&quot;list&quot;,&quot;view&quot;,&quot;edit&quot;],&quot;default&quot;:&quot;login&quot;,&quot;tsType&quot;:&quot;'login'|'list'|'view'|'edit'&quot;},&quot;listDensity&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;comfortable&quot;,&quot;compact&quot;],&quot;default&quot;:&quot;comfortable&quot;,&quot;tsType&quot;:&quot;'comfortable'|'compact'&quot;}}">
+const PEOPLE={maya:{name:'Maya Chen',initials:'MC'},priya:{name:'Priya Raman',initials:'PR'},daniel:{name:'Daniel Okafor',initials:'DO'},lena:{name:'Lena Fischer',initials:'LF'},tomas:{name:'Tomás Herrera',initials:'TH'},sam:{name:'Sam Whitfield',initials:'SW'},jun:{name:'Jun Park',initials:'JP'},ava:{name:'Ava Moreau',initials:'AM'}};
+let UID=100;const nid=()=>'c'+(UID++);
+const cm=(author,text,time,likes,replies=[])=>({id:nid(),author,text,time,likes,liked:false,replies:replies.map(r=>({id:nid(),author:r[0],text:r[1],time:r[2],likes:r[3],liked:false}))});
+
+const P1a="## Problem\n\nCustomer feedback lives in at least six places: support tickets, sales call notes, NPS verbatims, the #voice-of-customer channel, interview recordings, and individual researchers' notebooks. When a PM wants to know what customers say about billing, the answer depends on who they ask.";
+const P1v1=P1a+"\n\n## Proposal\n\nStand up a single research repository where every piece of feedback is tagged against a shared taxonomy, covering all six sources from day one.";
+const P1v2=P1v1+"\n\n## Cost\n\nTooling runs about $18k per year for 40 seats. The bigger cost is time: roughly two weeks of research ops effort to migrate existing notes, then an hour per week per researcher to keep tagging consistent.";
+const P1v3=P1a+"\n\n## Proposal\n\nStand up a single research repository where every piece of feedback is tagged against a shared taxonomy. Phase 1 covers Product and Design only: interview notes, usability findings, and NPS verbatims. Support and Sales sources follow in Phase 2 once the taxonomy has settled.\n\n## Cost\n\nTooling runs about $18k per year for 40 seats. The bigger cost is time: roughly two weeks of research ops effort to migrate existing notes, then an hour per week per researcher to keep tagging consistent.\n\n## What we'd measure\n\nTime from question to answer for PMs, the share of roadmap items that cite at least one tagged insight, and repository search volume after 90 days.";
+const T1='Consolidate customer feedback into one research repository',S1='Bring interview notes, usability findings and NPS verbatims into a single tagged repository so product decisions can cite real evidence.';
+
+const P2v1="## Context\n\nPlatform teams currently run continuous two-week sprints with no break between them. Tech debt, on-call follow-ups and exploratory work get squeezed into the margins.\n\n## Proposal\n\nRun two-week sprints followed by a one-week cooldown. During cooldown there are no planned feature tickets; engineers pick from a shared backlog of debt, tooling and spikes.";
+const P2v2=P2v1+"\n\n## Guardrails\n\nCooldown weeks are staggered across teams so at least half of Platform is always on planned work. Incidents still take priority. We'd review after two full cycles using deploy frequency and the size of the debt backlog.";
+
+const P3v1="## Why change\n\nOur quarterly NPS survey has a 6% response rate and arrives months after the experience it asks about. Verbatims are hard to connect to a specific feature.\n\n## Proposal\n\nReplace it with short, event-triggered questions inside the product: one question after a key task is completed, capped at one prompt per user every 30 days.\n\n## Open questions\n\nWe need to agree on which five events trigger a prompt in the first release, and whether we keep a yearly relationship survey for the board report.";
+
+const P4v1="## Proposal\n\nPublish our design token pipeline (the scripts that turn the token source files into CSS, iOS and Android outputs) as an open-source package under the MIT licence.";
+const P4v2=P4v1+"\n\n## Why\n\nThree partner teams have asked for it, and maintaining private forks for them costs us roughly a day a month. Open-sourcing also helps hiring: it's the kind of work front-end candidates ask about.\n\n## Scope\n\nOnly the build scripts and documentation. Our actual token values and brand assets stay private.";
+
+const P5v1="## Problem\n\nNew hires wait an average of nine days for analytics access, and most of them learn the tools by asking whoever sits nearby.\n\n## Proposal\n\nCreate a self-serve onboarding path: access granted automatically by role on day one, a short guided tour of the three dashboards every team uses, and a sandbox dataset to practise queries on.";
+const P5draft=P5v1+"\n\n## Ownership\n\nThe Data Platform team owns access rules. Each department nominates one analytics buddy who reviews the tour content twice a year.\n\n## Success\n\nMedian time to first query under two days, and fewer access tickets in the first month of employment.";
+
+const P6draft="## Problem\n\nData and Infra run separate on-call rotations, but roughly 40% of Data pages are caused by infrastructure issues. Both teams end up awake for the same incident.\n\n## Proposal\n\nMerge into one rotation with a shared runbook. Each shift pairs one Data engineer with one Infra engineer for the first three months.";
+
+const P7v1="## Proposal\n\nRun a three-month pilot of an internal mentorship marketplace. Anyone can list skills they're happy to mentor on, and anyone can request a 30-minute session.\n\n## Pilot size\n\nEngineering and Design only, about 120 people. We'd use a simple form and a shared calendar rather than buying a tool.\n\n## Measure\n\nNumber of sessions booked, repeat bookings, and a short survey at the end of the pilot.";
+
+const v=(n,date,note,title,summary,body)=>({v:n,date,note,title,summary,body});
+const SEED=[
+ {id:'p1',author:'priya',tags:['Research','Product'],ts:10,updated:'2 days ago',draft:null,following:false,
+  versions:[v(1,'Sep 12','Initial version',T1,S1,P1v1),v(2,'Sep 20','Added cost estimate',T1,S1,P1v2),v(3,'Sep 30','Narrowed Phase 1 to Product and Design; added success metrics',T1,S1,P1v3)],
+  comments:[
+   cm('daniel','Strong +1 on narrowing Phase 1. Trying to bring Support in during the same quarter would have stalled on taxonomy debates.','2d',6,[['priya','That was the main feedback from the v2 review. Thanks for pushing on it.','2d',2],['lena','@Daniel Okafor agreed, though Support should still see the taxonomy draft early so Phase 2 isn’t a rewrite.','1d',3],['sam','Happy to be the Support contact for that review.','1d',1]]),
+   cm('jun','Who owns the taxonomy long term? If it’s everyone, it’s no one.','1d',4,[['priya','Research Ops owns it, with a quarterly review open to any team. I’ll add that to the next version.','1d',1]]),
+   cm('ava','Is $18k for 40 seats the list price? We may be able to fold this into the existing analytics contract.','20h',2),
+   cm('sam','Would love to see one example of a roadmap decision that would have gone differently with this in place.','6h',1,[['tomas','The Q2 billing redesign is a good candidate. We shipped it and then found three months of tickets describing the exact issue.','5h',5]])
+  ]},
+ {id:'p2',author:'daniel',tags:['Process','Engineering'],ts:9,updated:'3 days ago',draft:null,following:false,
+  versions:[v(1,'Sep 18','Initial version','Add a cooldown week after every two-week sprint','Give Platform teams a recurring week for debt, tooling and exploration instead of squeezing it between sprints.',P2v1),v(2,'Sep 29','Added guardrails and review criteria','Add a cooldown week after every two-week sprint','Give Platform teams a recurring week for debt, tooling and exploration instead of squeezing it between sprints.',P2v2)],
+  comments:[cm('lena','How does this interact with release trains? Product will want to know whether a cooldown week means no release.','3d',3,[['daniel','Releases continue as normal. Cooldown only affects what gets planned, not what ships.','3d',2]]),cm('jun','Staggering is the right call. We tried an all-hands cooldown at my last company and support felt abandoned.','2d',4)]},
+ {id:'p3',author:'lena',tags:['Product','Research'],ts:8,updated:'5 days ago',draft:null,following:true,
+  versions:[v(1,'Sep 27','Initial version','Replace the quarterly NPS survey with in-product micro-surveys','Ask one question at the right moment instead of twenty questions three months later.',P3v1)],
+  comments:[cm('priya','If this ships, those verbatims would be a great first source for the research repository.','4d',2),cm('ava','Finance still needs a single NPS number for the board deck. Can we derive one from the micro-surveys?','4d',1)]},
+ {id:'p5',author:'maya',tags:['People','Engineering'],ts:7,updated:'1 week ago',following:false,
+  draft:{title:'Self-serve analytics onboarding for new hires',summary:'Give every new hire analytics access and a guided start on day one instead of a nine-day wait.',body:P5draft,saved:'yesterday'},
+  versions:[v(1,'Sep 24','Initial version','Self-serve analytics onboarding for new hires','Give every new hire analytics access and a guided start on day one instead of a nine-day wait.',P5v1)],
+  comments:[cm('daniel','Who decides which role gets which access? That’s usually where these stall.','6d',2,[['maya','Good question. I’m adding an ownership section in the next version.','5d',1]]),cm('sam','The sandbox dataset alone would save my team hours every onboarding.','5d',3)]},
+ {id:'p4',author:'tomas',tags:['Engineering'],ts:6,updated:'2 weeks ago',draft:null,following:false,
+  versions:[v(1,'Sep 10','Initial version','Open-source the design token pipeline','Publish the build scripts behind our tokens so partner teams stop maintaining private forks.',P4v1),v(2,'Sep 16','Added rationale and scope limits','Open-source the design token pipeline','Publish the build scripts behind our tokens so partner teams stop maintaining private forks.',P4v2)],
+  comments:[cm('ava','Legal will want to review the licence choice, but MIT is usually fine.','2w',2,[['tomas','I’ll loop them in before we publish anything.','2w',0]])]},
+ {id:'p7',author:'sam',tags:['People'],ts:5,updated:'3 weeks ago',draft:null,following:false,
+  versions:[v(1,'Sep 8','Initial version','Pilot an internal mentorship marketplace','A three-month pilot where anyone can offer or book 30-minute mentoring sessions.',P7v1)],comments:[]},
+ {id:'p6',author:'maya',tags:['Engineering','Process'],ts:4,updated:'4 days ago',following:false,versions:[],comments:[],
+  draft:{title:'Shared on-call rotation between Data and Infra',summary:'Merge two rotations that keep getting paged for the same incidents.',body:P6draft,saved:'4 days ago'}}
+];
+const ME='maya';
+const latest=p=>p.versions[p.versions.length-1]||null;
+const content=p=>latest(p)||p.draft;
+const nComments=p=>p.comments.reduce((a,c)=>a+1+c.replies.length,0);
+
+class Component extends DCLogic {
+  state={screen:'login',email:'maya.chen@insight.co',password:'insight2026',loginError:'',proposals:SEED,query:'',tab:'all',tag:null,sort:'recent',currentId:null,viewV:null,newComment:'',replyTo:null,replyText:'',expanded:{},edit:null,toast:'',menuOpen:false};
+  componentDidMount(){
+    const s=this.props.startScreen;
+    if(s==='list')this.setState({screen:'list'});
+    if(s==='view')this.setState({screen:'view',currentId:'p1'});
+    if(s==='edit')this.editProposal('p5');
+  }
+  go(o){this.setState({menuOpen:false,...o});window.scrollTo(0,0);}
+  flash(t){this.setState({toast:t});clearTimeout(this._t);this._t=setTimeout(()=>this.setState({toast:''}),2400);}
+  upd(id,fn){this.setState(s=>({proposals:s.proposals.map(p=>p.id===id?fn(p):p)}));}
+  login(){const{email,password}=this.state;if(!/.+@.+\..+/.test(email))return this.setState({loginError:'Enter a valid work email.'});if(!password)return this.setState({loginError:'Enter your password.'});this.go({screen:'list',loginError:''});}
+  open(id){this.go({screen:'view',currentId:id,viewV:null,replyTo:null,newComment:''});}
+  newProposal(){this.go({screen:'edit',edit:{id:null,title:'',summary:'',body:'',tags:'',note:'',error:'',saved:null}});}
+  editProposal(id){const p=this.state.proposals.find(x=>x.id===id);const src=p.draft||latest(p);this.go({screen:'edit',edit:{id,title:src.title,summary:src.summary,body:src.body,tags:p.tags.join(', '),note:'',error:'',saved:p.draft?p.draft.saved:null}});}
+  parseTags(t){return t.split(',').map(x=>x.trim()).filter(Boolean).map(x=>x[0].toUpperCase()+x.slice(1));}
+  saveDraft(){
+    const e=this.state.edit;if(!e.title.trim())return this.setEdit({error:'Add a title before saving a draft.'});
+    const d={title:e.title.trim(),summary:e.summary.trim(),body:e.body,saved:'just now'};const tags=this.parseTags(e.tags);
+    if(!e.id){const id='p'+Date.now();this.setState(s=>({proposals:[{id,author:ME,tags,ts:Date.now(),updated:'Just now',versions:[],comments:[],draft:d,following:false},...s.proposals],edit:{...s.edit,id,saved:'just now'}}));}
+    else{this.upd(e.id,p=>({...p,draft:d,tags,ts:Date.now(),updated:'Just now'}));this.setEdit({saved:'just now'});}
+    this.flash('Draft saved');
+  }
+  publish(){
+    const e=this.state.edit;const p=e.id&&this.state.proposals.find(x=>x.id===e.id);
+    if(!e.title.trim()||!e.summary.trim()||!e.body.trim())return this.setEdit({error:'A title, summary and body are required to publish.'});
+    const isUpd=p&&p.versions.length>0;if(isUpd&&!e.note.trim())return this.setEdit({error:'Describe what changed in this version.'});
+    const n=(p?p.versions.length:0)+1;const ver=v(n,'Oct 2',e.note.trim()||'Initial version',e.title.trim(),e.summary.trim(),e.body);const tags=this.parseTags(e.tags);
+    if(!p){const id='p'+Date.now();this.setState(s=>({proposals:[{id,author:ME,tags,ts:Date.now(),updated:'Just now',versions:[ver],comments:[],draft:null,following:false},...s.proposals]}));this.go({screen:'view',currentId:id,viewV:null,edit:null});}
+    else{this.upd(p.id,q=>({...q,tags,versions:[...q.versions,ver],draft:null,ts:Date.now(),updated:'Just now'}));this.go({screen:'view',currentId:p.id,viewV:null,edit:null});}
+    this.flash('Published v'+n);
+  }
+  setEdit(o){this.setState(s=>({edit:{...s.edit,...o}}));}
+  field(k){return e=>{const val=e.target.value;this.setEdit({[k]:val,error:''});};}
+  like(pid,cid,rid){this.upd(pid,p=>({...p,comments:p.comments.map(c=>{if(c.id!==cid)return c;if(!rid)return{...c,liked:!c.liked,likes:c.likes+(c.liked?-1:1)};return{...c,replies:c.replies.map(r=>r.id!==rid?r:{...r,liked:!r.liked,likes:r.likes+(r.liked?-1:1)})};})}));}
+  postComment(){const t=this.state.newComment.trim();if(!t)return;const id=this.state.currentId;this.upd(id,p=>({...p,comments:[{id:nid(),author:ME,text:t,time:'Just now',likes:0,liked:false,replies:[]},...p.comments]}));this.setState({newComment:''});}
+  submitReply(cid){const t=this.state.replyText.trim();if(!t)return;const id=this.state.currentId;this.upd(id,p=>({...p,comments:p.comments.map(c=>c.id!==cid?c:{...c,replies:[...c.replies,{id:nid(),author:ME,text:t,time:'Just now',likes:0,liked:false}]})}));this.setState(s=>({replyTo:null,replyText:'',expanded:{...s.expanded,[cid]:true}}));}
+  av(a){return a===ME?{avBg:'#1f3d2e',avColor:'#f1efe6'}:{avBg:'#e2ebe4',avColor:'#234a36'};}
+  splitMention(text){const names=Object.values(PEOPLE).map(p=>'@'+p.name);const m=names.find(n=>text.startsWith(n));return m?{hasMention:true,mention:m,body:text.slice(m.length).trim()}:{hasMention:false,mention:'',body:text};}
+
+  renderVals(){
+    const s=this.state;const compact=this.props.listDensity==='compact';
+    const visible=s.proposals.filter(p=>p.versions.length||p.author===ME);
+    const tabDefs=[['all','All proposals',visible],['mine','My proposals',s.proposals.filter(p=>p.author===ME)],['drafts','Drafts',s.proposals.filter(p=>p.author===ME&&p.draft)],['following','Following',visible.filter(p=>p.following)]];
+    const base=(tabDefs.find(t=>t[0]===s.tab)||tabDefs[0])[2];
+    const q=s.query.trim().toLowerCase();
+    let rows=base.filter(p=>{const c=content(p);const hay=[c.title,c.summary,PEOPLE[p.author].name,...p.tags].join(' ').toLowerCase();return(!q||hay.includes(q))&&(!s.tag||p.tags.includes(s.tag));});
+    rows=[...rows].sort((a,b)=>s.sort==='discussed'?nComments(b)-nComments(a):b.ts-a.ts);
+    const tagCounts={};visible.forEach(p=>p.tags.forEach(t=>tagCounts[t]=(tagCounts[t]||0)+1));
+    const tabLabel=(tabDefs.find(t=>t[0]===s.tab)||tabDefs[0])[1];
+    const out={
+      isLogin:s.screen==='login',isApp:s.screen!=='login',isList:s.screen==='list',isView:s.screen==='view',isEdit:s.screen==='edit',
+      email:s.email,password:s.password,loginError:s.loginError,hasLoginError:!!s.loginError,
+      onEmail:e=>this.setState({email:e.target.value,loginError:''}),onPassword:e=>this.setState({password:e.target.value,loginError:''}),
+      onLogin:()=>this.login(),onLoginKey:e=>{if(e.key==='Enter')this.login();},
+      onLogout:()=>this.go({screen:'login'}),toggleMenu:()=>this.setState({menuOpen:!s.menuOpen}),menuOpen:s.menuOpen,
+      goList:()=>this.go({screen:'list'}),goMine:()=>this.go({screen:'list',tab:'mine',tag:null}),onNew:()=>this.newProposal(),
+      query:s.query,onQuery:e=>{this.setState({query:e.target.value,screen:s.screen==='edit'?'edit':'list'});},
+      sort:s.sort,onSort:e=>this.setState({sort:e.target.value}),showSummary:!compact,
+      tabs:tabDefs.map(([id,label,list])=>({label,count:list.length,bg:s.tab===id?'#fff':'transparent',border:s.tab===id?'#e0ddd4':'transparent',weight:s.tab===id?600:400,onClick:()=>this.setState({tab:id})})),
+      tagList:Object.keys(tagCounts).sort().map(t=>({name:t,count:tagCounts[t],bg:s.tag===t?'#e2ebe4':'transparent',color:s.tag===t?'#234a36':'#3a423c',weight:s.tag===t?600:400,onClick:()=>this.setState({tag:s.tag===t?null:t})})),
+      listTitle:s.tag?tabLabel+' · '+s.tag:tabLabel,
+      listSubtitle:rows.length+(rows.length===1?' proposal':' proposals')+(q?' matching “'+s.query.trim()+'”':''),
+      hasRows:rows.length>0,noRows:rows.length===0,clearFilters:()=>this.setState({query:'',tag:null,tab:'all'}),
+      rows:rows.map(p=>{const c=content(p);const L=latest(p);return{title:c.title,summary:c.summary,authorName:PEOPLE[p.author].name,initials:PEOPLE[p.author].initials,updated:'Updated '+p.updated.toLowerCase(),versionLabel:L?'v'+L.v:'Not published',commentCount:nComments(p),tags:p.tags.map(n=>({name:n})),isDraft:!L,hasPending:!!(L&&p.draft&&p.author===ME),onOpen:()=>this.open(p.id)};}),
+      newComment:s.newComment,onNewComment:e=>this.setState({newComment:e.target.value}),onPostComment:()=>this.postComment(),postBg:s.newComment.trim()?'#2e5e45':'#9fb5a7',
+      toast:s.toast,hasToast:!!s.toast,
+      onSaveDraft:()=>this.saveDraft(),onPublish:()=>this.publish(),
+      onTitle:this.field('title'),onSummary:this.field('summary'),onBody:this.field('body'),onTags:this.field('tags'),onNote:this.field('note'),
+      v:{},ed:{}
+    };
+    const p=s.proposals.find(x=>x.id===s.currentId);
+    if(s.screen==='view'&&p){
+      const L=latest(p);const shown=s.viewV!=null?p.versions.find(x=>x.v===s.viewV):(L||p.draft);const mine=p.author===ME;
+      const paras=shown.body.split(/\n\s*\n/).map(t=>t.trim()).filter(Boolean).map(t=>t.startsWith('## ')?{isH:true,isP:false,text:t.slice(3)}:{isH:false,isP:true,text:t});
+      out.v={
+        title:shown.title,summary:shown.summary,paras,tags:p.tags.map(n=>({name:n})),authorName:PEOPLE[p.author].name,initials:PEOPLE[p.author].initials,
+        metaLine:L?('Published v'+L.v+' · '+L.date+(p.versions.length>1?' · first published '+p.versions[0].date:'')):'Draft · saved '+p.draft.saved,
+        isOld:s.viewV!=null&&L&&s.viewV!==L.v,shownLabel:shown.v?'v'+shown.v:'',shownDate:shown.date,shownNote:shown.note,latestLabel:L?'v'+L.v:'',onLatest:()=>this.setState({viewV:null}),
+        isDraftOnly:!L,isPublished:!!L,canComment:!!L,isMine:mine,notMine:!mine,
+        statusLine:L?(p.versions.length+(p.versions.length===1?' version':' versions')+' · last published '+L.date):'Not published yet',
+        editLabel:p.draft?'Continue draft':(L?'Edit as new version':'Edit draft'),onEdit:()=>this.editProposal(p.id),
+        followLabel:p.following?'Following ✓':'Follow proposal',onFollow:()=>{this.upd(p.id,x=>({...x,following:!x.following}));this.flash(p.following?'Unfollowed':'You’ll be notified about new versions');},
+        hasPendingMine:!!(mine&&p.draft&&L),draftSaved:p.draft?p.draft.saved:'',noVersions:!L,
+        versions:[...p.versions].reverse().map(x=>{const active=shown===x;return{label:'v'+x.v,date:x.date,note:x.note,isLatest:x===L,bg:active?'#eef3ee':'transparent',dot:active?'#2e5e45':'#c9cec7',onClick:()=>this.setState({viewV:x===L?null:x.v})};}),
+        commentCount:nComments(p),
+        comments:p.comments.map(c=>{const many=c.replies.length>2&&!s.expanded[c.id];const shownR=many?c.replies.slice(-1):c.replies;const hidden=c.replies.length-shownR.length;
+          return{...this.av(c.author),initials:PEOPLE[c.author].initials,authorName:PEOPLE[c.author].name,text:c.text,time:c.time,likes:c.likes,hasLikes:c.likes>0,likeColor:c.liked?'#2e5e45':'#5d665f',
+            onLike:()=>this.like(p.id,c.id),onReply:()=>this.setState({replyTo:c.id,replyText:''}),
+            hasReplies:c.replies.length>0,collapsed:hidden>0,replyCountLabel:hidden+' earlier '+(hidden===1?'reply':'replies'),onExpand:()=>this.setState({expanded:{...s.expanded,[c.id]:true}}),
+            shownReplies:shownR.map(r=>({...this.av(r.author),...this.splitMention(r.text),initials:PEOPLE[r.author].initials,authorName:PEOPLE[r.author].name,time:r.time,likes:r.likes,hasLikes:r.likes>0,likeColor:r.liked?'#2e5e45':'#5d665f',
+              onLike:()=>this.like(p.id,c.id,r.id),onReply:()=>this.setState({replyTo:c.id,replyText:r.author===ME?'':'@'+PEOPLE[r.author].name+' '})})),
+            showReplyBox:s.replyTo===c.id,replyText:s.replyText,onReplyChange:e=>this.setState({replyText:e.target.value}),
+            onReplyKey:e=>{if(e.key==='Enter'){e.preventDefault();this.submitReply(c.id);}if(e.key==='Escape')this.setState({replyTo:null});},
+            onReplySubmit:()=>this.submitReply(c.id),onReplyCancel:()=>this.setState({replyTo:null,replyText:''})};})
+      };
+    }
+    if(s.screen==='edit'&&s.edit){
+      const e=s.edit;const ep=e.id&&s.proposals.find(x=>x.id===e.id);const L=ep&&latest(ep);const n=(ep?ep.versions.length:0)+1;
+      out.ed={title:e.title,summary:e.summary,body:e.body,tags:e.tags,note:e.note,error:e.error,hasError:!!e.error,
+        heading:!ep?'New proposal':(L?'Editing '+'v'+n+' draft':'Editing draft'),
+        backLabel:ep?'Back to proposal':'Cancel',
+        statusText:!ep?'New · not saved yet':(L?'Published v'+L.v+(ep.draft?' · draft of v'+n+' in progress':''):'Draft · not published'),
+        savedLine:e.saved?'Draft saved '+e.saved:'',
+        publishLabel:L?'Publish v'+n:'Publish',
+        noteLabel:L?'What changed in v'+n+'?':'Version note (optional)',notePlaceholder:L?'e.g. Added cost estimate':'Initial version',
+        publishHint:L?'Required. v1–v'+L.v+' stay readable in version history.':'Publishing creates v1 and opens comments.',
+        hasHistory:!!L,history:L?[...ep.versions].reverse().map(x=>({label:'v'+x.v,note:x.note})):[]};
+    }
+    out.onCancelEdit=()=>{const e=s.edit;if(e&&e.id)this.open(e.id);else this.go({screen:'list'});};
+    return out;
+  }
+}
+</script>
+</body>
+</html>
