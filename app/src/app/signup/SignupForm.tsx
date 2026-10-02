@@ -7,7 +7,7 @@ import { signup, type FormState } from "../auth-actions";
 export function SignupForm() {
   const [state, action, pending] = useActionState<FormState, FormData>(signup, {});
   return (
-    <form action={action} className="login-form">
+    <form action={action} className="login-form" noValidate>
       <div className="intro">
         <h2>Create an account</h2>
         <p>Citizen accounts can draft proposals and join every discussion.</p>

@@ -10,7 +10,7 @@ export function LoginForm() {
   const error = state.error;
 
   return (
-    <form action={action} className="login-form" onChange={() => setInfo("")}>
+    <form action={action} className="login-form" noValidate onChange={() => setInfo("")}>
       <div className="intro">
         <h2>Sign in</h2>
         <p>Use your citizen or official account to continue.</p>
