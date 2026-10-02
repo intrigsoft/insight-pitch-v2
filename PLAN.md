@@ -15,22 +15,22 @@ Source design: claude.ai/design project "Insight Pitch proposal management"
 ## Checklist
 
 ### Foundation
-- [ ] Project scaffold, fonts (Geist + Newsreader), design tokens and global CSS
-- [ ] Database schema, migrations, seed data matching the design (8 people, 9 streams, 8 proposals, versions, comments)
-- [ ] Auth: sign in, sign out, sessions, route protection (proxy), admin role
-- [ ] Design reference screenshots (one per screen) for visual comparison
+- [x] Project scaffold, fonts (Geist + Newsreader), design tokens and global CSS
+- [x] Database schema, migrations, seed data matching the design (8 people, 9 streams, 8 proposals, versions, comments)
+- [x] Auth: sign in, sign out, sessions, route protection (proxy), admin role
+- [x] Design reference screenshots (one per screen) for visual comparison
 
 ### Screens
-- [ ] Login: split layout, validation errors, sign in, "Continue with national ID", forgot password, create account
-- [ ] App header: logo, search, New proposal, settings button (admins), avatar menu (My proposals, Admin settings, Sign out)
-- [ ] Proposals list: Library tabs with counts, Streams filter, search, sort (recent / discussed / score), badges, score chips, compact empty state, clear filters
-- [ ] Proposal view: version banner, draft notice, title/summary/meta, stream scores card (Jev caption, "Not scored"), body with ## headings, status card (edit / follow), version history with unpublished draft entry
-- [ ] Discussion: post comment, like/unlike, reply (Enter to send, Esc to cancel), @mention replies, collapse to latest reply with "View N earlier replies"
-- [ ] Editor: title/summary/body, stream chips + score sliders (by scoring mode), status card, version note rules, save draft, publish v1 / publish vN, validation errors, published versions list, toasts
-- [ ] Admin settings: Streams tab (table, active toggle, add/edit drawer with colour, overlaps, active, delete or in-use note, duplicate-name check)
-- [ ] Admin settings: Scoring tab (scale 1–5 / 0–10 / 0–100, who assigns scores, require stream, show public scores)
-- [ ] Admin settings: Overlaps tab (co-occurrence matrix, linked outlines, suggested overlaps with Link)
-- [ ] Jev scoring on publish (scores selected streams), caption and fallback when Jev is unavailable
+- [x] Login: split layout, validation errors, sign in, "Continue with national ID", forgot password, create account
+- [x] App header: logo, search, New proposal, settings button (admins), avatar menu (My proposals, Admin settings, Sign out)
+- [x] Proposals list: Library tabs with counts, Streams filter, search, sort (recent / discussed / score), badges, score chips, compact empty state, clear filters
+- [x] Proposal view: version banner, draft notice, title/summary/meta, stream scores card (Jev caption, "Not scored"), body with ## headings, status card (edit / follow), version history with unpublished draft entry
+- [x] Discussion: post comment, like/unlike, reply (Enter to send, Esc to cancel), @mention replies, collapse to latest reply with "View N earlier replies"
+- [x] Editor: title/summary/body, stream chips + score sliders (by scoring mode), status card, version note rules, save draft, publish v1 / publish vN, validation errors, published versions list, toasts
+- [x] Admin settings: Streams tab (table, active toggle, add/edit drawer with colour, overlaps, active, delete or in-use note, duplicate-name check)
+- [x] Admin settings: Scoring tab (scale 1–5 / 0–10 / 0–100, who assigns scores, require stream, show public scores)
+- [x] Admin settings: Overlaps tab (co-occurrence matrix, linked outlines, suggested overlaps with Link)
+- [x] Jev scoring on publish (scores selected streams), caption and fallback when Jev is unavailable
 
 ### Quality
 - [ ] Playwright e2e tests covering every screen and flow
