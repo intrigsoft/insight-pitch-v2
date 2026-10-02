@@ -11,7 +11,10 @@
     "db:migrate": "tsx scripts/migrate.mts",
     "db:seed": "tsx scripts/seed.mts",
     "db:reset": "tsx scripts/migrate.mts && tsx scripts/seed.mts",
-    "test:e2e": "playwright test"
+    "test:e2e": "playwright test",
+    "jev:rescore": "tsx --conditions=react-server scripts/jev-rescore.mts",
+    "test:visual": "playwright test visual",
+    "design:refs": "tsx scripts/design-refs.mts"
   },
   "dependencies": {
     "bcryptjs": "^3.0.3",

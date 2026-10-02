@@ -160,10 +160,6 @@ h1, h2, h3 { text-wrap: balance; }
 .divider { display: flex; align-items: center; gap: 12px; color: var(--faint); font-size: 12px; }
 .divider::before, .divider::after { content: ""; flex: 1; height: 1px; background: #dedbd2; }
 .info-text { font-size: 13px; color: var(--green-dark); background: var(--mint); padding: 8px 12px; border-radius: 8px; }
-@media (max-width: 600px) {
-  .login-hero { padding: 32px 24px; gap: 40px; }
-  .login-hero h1 { font-size: 40px; }
-}
 
 /* Header */
 .header { position: sticky; top: 0; z-index: 20; background: rgba(245, 244, 239, 0.92); backdrop-filter: blur(10px); border-bottom: 1px solid var(--line); }

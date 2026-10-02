@@ -5,17 +5,18 @@ import { createContext, useCallback, useContext, useRef, useState } from "react"
 const ToastContext = createContext<(message: string) => void>(() => {});
 
 export function ToastProvider({ children }: { children: React.ReactNode }) {
-  const [message, setMessage] = useState("");
+  const [toast, setToast] = useState<{ id: number; message: string } | null>(null);
   const timer = useRef<ReturnType<typeof setTimeout>>(undefined);
   const flash = useCallback((m: string) => {
-    setMessage(m);
+    // A new id restarts the entry animation even when the same message repeats.
+    setToast((t) => ({ id: (t?.id ?? 0) + 1, message: m }));
     clearTimeout(timer.current);
-    timer.current = setTimeout(() => setMessage(""), 2400);
+    timer.current = setTimeout(() => setToast(null), 2400);
   }, []);
   return (
     <ToastContext.Provider value={flash}>
       {children}
-      {message ? <div className="toast" role="status" key={message + Date.now()}>{message}</div> : null}
+      {toast ? <div className="toast" role="status" key={toast.id}>{toast.message}</div> : null}
     </ToastContext.Provider>
   );
 }
