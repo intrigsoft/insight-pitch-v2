@@ -124,6 +124,10 @@ sideways at 390px.
 scores for Jev's.
 
 **Open points for you:**
+- **Moderation word list (later).** `app/src/lib/romanised-profanity.ts` is a starter list of Singlish/Tanglish swear
+  words written without a native speaker. To do: have a fluent Sinhala and Tamil speaker review and extend it, and
+  consider making it an editable list in Admin settings → Moderation so moderators can add words without a deploy.
+  Also worth a review: the carpool-style off-topic chatter that Jev still holds as spam.
 - Whether seeded proposals should show Jev scores by default (run the rescore during seeding) or keep the
   design's numbers as author scores, as now.
 - Forgot password and national ID sign-in need real providers if they're wanted.
