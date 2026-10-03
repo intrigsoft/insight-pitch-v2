@@ -7,6 +7,14 @@ test.beforeEach(async ({ page }) => {
 });
 
 const drawer = (page: Page) => page.getByRole("dialog");
+// Settings update on screen before the server confirms; reload to be sure a change was saved before moving on.
+const saved = async (page: Page, check: () => Promise<void>) => {
+  await page.waitForLoadState("networkidle");
+  await expect(async () => {
+    await page.reload();
+    await check();
+  }).toPass({ timeout: 15_000 });
+};
 
 test("streams table lists every stream with counts and overlaps", async ({ page }) => {
   await page.getByRole("link", { name: "Admin settings" }).click();
@@ -68,7 +76,7 @@ test("streams in use can't be deleted, only deactivated", async ({ page }) => {
 test("score scale and public score setting change how scores show", async ({ page }) => {
   await page.goto("/settings?tab=scoring");
   await page.getByRole("button", { name: "0 – 100" }).click();
-  await expect(page.getByRole("button", { name: "0 – 100" })).toHaveAttribute("aria-pressed", "true");
+  await saved(page, () => expect(page.getByRole("button", { name: "0 – 100" })).toHaveAttribute("aria-pressed", "true", { timeout: 2000 }));
   await page.goto("/");
   const hospital = page.locator("a.row").filter({ hasText: TITLES.hospital });
   await expect(hospital.locator(".score-chip").first()).toHaveText("Healthcare90");
@@ -77,8 +85,9 @@ test("score scale and public score setting change how scores show", async ({ pag
 
   await page.goto("/settings?tab=scoring");
   await page.getByRole("button", { name: "1 – 5" }).click();
+  await saved(page, () => expect(page.getByRole("button", { name: "1 – 5" })).toHaveAttribute("aria-pressed", "true", { timeout: 2000 }));
   await page.getByRole("switch", { name: "Show scores on the public listing" }).click();
-  await expect(page.getByRole("switch", { name: "Show scores on the public listing" })).toHaveAttribute("aria-checked", "false");
+  await saved(page, () => expect(page.getByRole("switch", { name: "Show scores on the public listing" })).toHaveAttribute("aria-checked", "false", { timeout: 2000 }));
   await page.goto("/");
   await expect(page.locator("a.row").filter({ hasText: TITLES.hospital }).locator(".score-chip").first()).toHaveText("Healthcare");
   await page.locator("a.row").filter({ hasText: TITLES.hospital }).click();
@@ -88,9 +97,9 @@ test("score scale and public score setting change how scores show", async ({ pag
 test("who assigns scores controls the editor sliders, and stream requirement can be lifted", async ({ page }) => {
   await page.goto("/settings?tab=scoring");
   await page.getByRole("radio", { name: /Reviewers/ }).click();
-  await expect(page.getByRole("radio", { name: /Reviewers/ })).toHaveAttribute("aria-checked", "true");
+  await saved(page, () => expect(page.getByRole("radio", { name: /Reviewers/ })).toHaveAttribute("aria-checked", "true", { timeout: 2000 }));
   await page.getByRole("switch", { name: "Require at least one stream to publish" }).click();
-  await expect(page.getByRole("switch", { name: "Require at least one stream to publish" })).toHaveAttribute("aria-checked", "false");
+  await saved(page, () => expect(page.getByRole("switch", { name: "Require at least one stream to publish" })).toHaveAttribute("aria-checked", "false", { timeout: 2000 }));
   await page.goto("/proposals/new");
   await expect(page.getByText("Pick the streams this affects. Reviewers assign scores after publishing.")).toBeVisible();
   await page.getByRole("button", { name: "Healthcare" }).click();

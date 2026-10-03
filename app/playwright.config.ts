@@ -21,7 +21,8 @@ export default defineConfig({
   },
   projects: [{ name: "chromium", use: { ...devices["Desktop Chrome"], viewport: { width: 1280, height: 900 } } }],
   webServer: {
-    command: `npx next build && npx next start -p ${PORT}`,
+    // Migrate first: the readiness check loads /login, which reads settings and languages from the database.
+    command: `npx tsx scripts/migrate.mts && npx next build && npx next start -p ${PORT}`,
     url: `http://localhost:${PORT}/login`,
     reuseExistingServer: !process.env.CI,
     timeout: 240_000,
