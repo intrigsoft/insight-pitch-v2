@@ -125,6 +125,10 @@ Source design: claude.ai/design project "Insight Pitch proposal management"
   0.1–1.95, so anything under 2.5 is retranslated once with the problem named. If it still fails, the banner says
   "N sections may need a human check" with a **Needs a check** tag until someone marks it reviewed. The translation
   prompt now keeps digits but translates currency and unit words. Interface strings aren't checked this way.
+- **Showing translation accuracy.** The banner shows "AI accuracy check: 95% · lowest section 92%" (Jev's 0–4 score
+  as a percentage, averaged over the proposal's sections), each translated paragraph shows its own score on hover,
+  low ones get an amber edge and "Possible translation error", and Settings → Languages shows the average per
+  language. It's labelled as an AI check with an explanation, not presented as measured accuracy.
 - **Reviewing translations.** Admins, officials and the proposal's author can mark a proposal's translation as
   reviewed; the reviewer is stored per paragraph.
 - **The moderator screen isn't in the design.** v3 says "Waiting for moderator review" but has nowhere to review,

@@ -8,7 +8,8 @@ export { leftoverScript } from "./script-check";
 // Tested on Sinhala and Tamil: good translations scored 3.5–3.8 out of 4; a changed amount, a dropped sentence, a
 // reversed meaning and a wrong paragraph scored 0.1–1.95. Below FIDELITY_MIN a section is retried once.
 
-export const FIDELITY_MIN = 2.5;
+export { FIDELITY_MIN } from "./fidelity";
+import { FIDELITY_MIN } from "./fidelity";
 
 const RUBRIC = [
   "0: Unrelated or mostly wrong.",

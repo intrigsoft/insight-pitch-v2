@@ -676,8 +676,8 @@ a.lang-item:hover { color: var(--ink); }
 .add-lang select, .lang-select { height: 38px; padding: 0 12px; border: 1px solid var(--line-2); border-radius: 999px; background: #fff; font-size: 14px; cursor: pointer; color: var(--ink); }
 .lang-select { border-radius: 10px; }
 .add-lang .btn-primary:disabled { background: #9fb5a7; cursor: default; opacity: 1; }
-.lang-table { min-width: 680px; }
-.lang-row { background: #fff; display: grid; grid-template-columns: minmax(0, 2fr) 120px 120px 150px 70px; gap: 20px; align-items: center; padding: 14px 22px; }
+.lang-table { min-width: 760px; }
+.lang-row { background: #fff; display: grid; grid-template-columns: minmax(0, 2fr) 110px 110px 90px 150px 70px; gap: 20px; align-items: center; padding: 14px 22px; }
 .lang-row.st-head { background: #faf9f5; padding: 10px 22px; }
 .lang-names { display: flex; flex-direction: column; min-width: 0; }
 .lang-names b { display: flex; align-items: center; gap: 8px; font-weight: 600; }
@@ -699,3 +699,6 @@ a.lang-item:hover { color: var(--ink); }
 .cmt-actions > span:first-child, .cmt-actions .rel, .cmt-actions .tx-note { white-space: nowrap; }
 .btn-block { white-space: normal; height: auto; min-height: 40px; padding: 8px 14px; text-align: center; line-height: 1.3; }
 .pill-red { background: #fbf3f1; color: var(--red); }
+.tx-accuracy { font-size: 12.5px; color: var(--green-dark); font-weight: 500; cursor: help; align-self: flex-start; border-bottom: 1px dotted currentColor; }
+.prose p.tx-low { border-left: 3px solid #d9a441; padding-left: 12px; margin-left: -15px; }
+.tx-low-note { display: block; font-family: var(--sans); font-size: 12px; font-weight: 600; color: var(--amber); margin-bottom: 2px; }

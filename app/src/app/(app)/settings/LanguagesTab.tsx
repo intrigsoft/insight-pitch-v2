@@ -5,7 +5,7 @@ import { useToast } from "@/components/Toast";
 import { useI18n } from "@/i18n/client";
 import { addLanguage, clearTranslationCache, removeLanguage, setDefaultLanguage, setGlossary, setLanguageEnabled, updateSetting } from "./actions";
 
-type Lang = { code: string; name: string; native: string; rtl: boolean; enabled: boolean; cached: number };
+type Lang = { code: string; name: string; native: string; rtl: boolean; enabled: boolean; cached: number; accuracy: number | null };
 type CatalogLang = { code: string; name: string; native: string };
 type LangSettings = { defaultLanguage: string; txOnPublish: boolean; txComments: boolean; txLabel: boolean; glossary: string[] };
 
@@ -71,7 +71,7 @@ export function LanguagesTab({ languages, catalog, settings }: { languages: Lang
         <div className="stream-table-wrap">
           <div className="stream-table lang-table" role="table" aria-label={t("set.tabLanguages")}>
             <div className="lang-row st-head" role="row">
-              <span role="columnheader">{t("lang.colLanguage")}</span><span role="columnheader">{t("lang.colDirection")}</span><span role="columnheader">{t("lang.colCached")}</span><span role="columnheader">{t("lang.colStatus")}</span><span />
+              <span role="columnheader">{t("lang.colLanguage")}</span><span role="columnheader">{t("lang.colDirection")}</span><span role="columnheader">{t("lang.colCached")}</span><span role="columnheader" title={t("lang.accuracyHelp")}>{t("lang.colAccuracy")}</span><span role="columnheader">{t("lang.colStatus")}</span><span />
             </div>
             {rows.map((l) => {
               const isDefault = l.code === s.defaultLanguage;
@@ -83,6 +83,7 @@ export function LanguagesTab({ languages, catalog, settings }: { languages: Lang
                   </div>
                   <span className={`lang-cell${l.enabled ? "" : " inactive"}`} role="cell">{l.rtl ? t("lang.rtl") : t("lang.ltr")}</span>
                   <span className={`lang-cell tabular${l.enabled ? "" : " inactive"}`} role="cell">{isDefault ? "—" : tn("lang.sections", l.cached)}</span>
+                  <span className={`lang-cell tabular${l.enabled ? "" : " inactive"}`} role="cell" title={t("lang.accuracyHelp")} data-testid={`accuracy-${l.code}`}>{isDefault || l.accuracy == null ? "—" : `${l.accuracy}%`}</span>
                   <div className="st-status" role="cell">
                     {isDefault ? (
                       <span className="muted-cell">{t("lang.alwaysOn")}</span>

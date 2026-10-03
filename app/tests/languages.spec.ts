@@ -96,6 +96,9 @@ test("proposals, stream names and the discussion are translated, with review", a
   const banner = page.getByTestId("translation-banner");
   await expect(banner).toContainText("மொழிபெயர்க்கப்பட்டது", { timeout: 90_000 });
   await expect(banner.locator(".tx-chip")).toBeVisible();
+  // Every translated section was checked, so the banner shows the AI accuracy check and each paragraph its own score.
+  await expect(banner.getByTestId("tx-accuracy")).toHaveText(/\d+%/);
+  await expect(page.locator(".prose p").first()).toHaveAttribute("title", /\d+%/);
   await expect(page.locator("h1.view-title")).not.toHaveText(TITLES.hospital);
 
   await banner.getByRole("link", { name: /English/ }).click();

@@ -7,6 +7,7 @@ import { savedAgo, shortDate } from "@/lib/format";
 import { formatScore, scaleSuffix } from "@/lib/scale";
 import { sortedScores } from "@/lib/proposal-view";
 import { bodyUnits, contentTranslator } from "@/lib/content-tx";
+import { FIDELITY_MIN } from "@/lib/fidelity";
 import { getI18n, getLanguages } from "@/i18n/server";
 import { BackIcon } from "@/components/icons";
 import { TranslateMissing } from "@/components/TranslateMissing";
@@ -86,6 +87,12 @@ export default async function ProposalPage({ params, searchParams }: PageProps<"
     const fresh = parts.filter((x) => x.fresh).length;
     const reviewed = parts.filter((x) => x.reviewed).length;
     const needsCheck = parts.filter((x) => x.needsCheck).length;
+    const scores = parts.map((x) => x.fidelity).filter((f): f is number => f != null);
+    const pct = (f: number) => Math.round((f / 4) * 100);
+    const accuracy = scores.length
+      ? t("tx.accuracy", { pct: pct(scores.reduce((a, b) => a + b, 0) / scores.length) }) +
+        (scores.length > 1 && Math.min(...scores) < Math.max(...scores) ? " · " + t("tx.accuracyLowest", { pct: pct(Math.min(...scores)) }) : "")
+      : undefined;
     const canReview = user.role !== "citizen" || mine;
     banner = showOriginal
       ? { state: "original", head: t("tx.showingOriginal", { lang: from }), sub: t("tx.showingOriginalSub", { lang: to }), toggleLabel: t("tx.showTranslation", { lang: to }), toggleHref: query({ original: null }) }
@@ -104,6 +111,8 @@ export default async function ProposalPage({ params, searchParams }: PageProps<"
                 : undefined,
             chipReviewed: reviewed === total && !needsCheck,
             chipWarn: needsCheck > 0,
+            accuracy,
+            accuracyHelp: t("tx.accuracyHelp"),
             toggleLabel: t("tx.showOriginal", { lang: from }),
             toggleHref: query({ original: "1" }),
             review: canReview && reviewed < total ? { proposalId: p.id, lang: viewLang, texts: proposalTexts } : undefined,
@@ -166,7 +175,19 @@ export default async function ProposalPage({ params, searchParams }: PageProps<"
           </section>
 
           <div className={`prose${dim ? " dim" : ""}`} lang={textLang}>
-            {units.map((u, i) => (u.h ? <h3 key={i}>{T(u.text)}</h3> : <p key={i}>{T(u.text)}</p>))}
+            {units.map((u, i) => {
+              // Each translated section shows its AI accuracy check on hover; low ones are marked.
+              const f = translating ? tx.get(u.text, srcLang).fidelity : null;
+              const low = f != null && f < FIDELITY_MIN;
+              const title = f != null ? t("tx.sectionAccuracy", { pct: Math.round((f / 4) * 100) }) : undefined;
+              if (u.h) return <h3 key={i} title={title}>{T(u.text)}</h3>;
+              return (
+                <p key={i} title={title} className={low ? "tx-low" : undefined}>
+                  {low ? <span className="tx-low-note">{t("tx.lowSection")}</span> : null}
+                  {T(u.text)}
+                </p>
+              );
+            })}
           </div>
 
           <Discussion

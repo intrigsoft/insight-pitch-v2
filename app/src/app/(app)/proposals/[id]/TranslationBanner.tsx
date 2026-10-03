@@ -18,6 +18,8 @@ export type BannerProps =
       chip?: string;
       chipReviewed?: boolean;
       chipWarn?: boolean;
+      accuracy?: string;
+      accuracyHelp?: string;
       toggleLabel: string;
       toggleHref: string;
       review?: { proposalId: string; lang: string; texts: string[] };
@@ -51,7 +53,11 @@ export function TranslationBanner(props: BannerProps) {
       ) : null}
       <div className="tx-top">
         <span className="tx-icon"><Globe size={17} /></span>
-        <div className="tx-text"><span className="tx-head">{head}</span><span className="tx-sub">{sub}</span></div>
+        <div className="tx-text">
+          <span className="tx-head">{head}</span>
+          <span className="tx-sub">{sub}</span>
+          {props.state === "ready" && props.accuracy ? <span className="tx-accuracy" title={props.accuracyHelp} data-testid="tx-accuracy">{props.accuracy}</span> : null}
+        </div>
         {props.state === "ready" && props.chip ? <span className={`pill ${props.chipReviewed ? "pill-green" : props.chipWarn ? "pill-red" : "pill-amber"} tx-chip`} data-testid="tx-chip">{props.chip}</span> : null}
       </div>
       {props.state !== "translating" || failed ? (

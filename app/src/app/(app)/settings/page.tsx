@@ -64,8 +64,13 @@ export default async function SettingsPage({ searchParams }: PageProps<"/setting
   }));
   suggestions.sort((x, y) => y.c - x.c);
 
-  const cacheCounts = tab === "languages"
-    ? Object.fromEntries((await db.select({ lang: translations.lang, n: sql<number>`count(*)::int` }).from(translations).groupBy(translations.lang)).map((r) => [r.lang, r.n]))
+  const cacheStats: Record<string, { n: number; accuracy: number | null }> = tab === "languages"
+    ? Object.fromEntries(
+        (await db
+          .select({ lang: translations.lang, n: sql<number>`count(*)::int`, avg: sql<number | null>`avg(${translations.fidelity})::float` })
+          .from(translations)
+          .groupBy(translations.lang)).map((r) => [r.lang, { n: r.n, accuracy: r.avg == null ? null : Math.round((r.avg / 4) * 100) }]),
+      )
     : {};
 
   return (
@@ -92,7 +97,7 @@ export default async function SettingsPage({ searchParams }: PageProps<"/setting
 
       {tab === "languages" ? (
         <LanguagesTab
-          languages={langs.map((l) => ({ ...l, cached: cacheCounts[l.code] ?? 0 }))}
+          languages={langs.map((l) => ({ ...l, cached: cacheStats[l.code]?.n ?? 0, accuracy: cacheStats[l.code]?.accuracy ?? null }))}
           catalog={LANGUAGE_CATALOG.filter((c) => !langs.some((l) => l.code === c.code)).map(({ code, name, native }) => ({ code, name, native }))}
           settings={{ defaultLanguage: settings.defaultLanguage, txOnPublish: settings.txOnPublish, txComments: settings.txComments, txLabel: settings.txLabel, glossary: settings.glossary }}
         />
