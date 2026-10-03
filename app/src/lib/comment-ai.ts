@@ -1,6 +1,7 @@
 import "server-only";
 import { systemOne, type ChoiceAnswer, type NoulAnswer, type ScoreAnswer } from "./jev";
 import { summarise } from "./openai";
+import { hasRomanisedProfanity } from "./romanised-profanity";
 
 // Jev reads each new comment once, before it posts: conduct, relevance to the proposal, and the kind of point it makes.
 // Insight grouping is a second Jev call; only brand-new insights need OpenAI to write a one-line summary.
@@ -28,10 +29,12 @@ const CONDUCT_INSTRUCTIONS = "Does the comment break the discussion rules? Judge
 
 // Jev reads Sinhala and Tamil script well but misses insults in romanised text (Singlish, Tanglish): in testing it
 // caught 4 of 9 romanised insults as written, and 9 of 9 once the text was converted to Sinhala or Tamil script.
-// So the first call also asks whether the comment is romanised, and only those comments get converted (OpenAI)
-// and checked a second time. English and native-script comments stay at one Jev call.
-const ROMANISED = "The comment is written in Sinhala or Tamil using English letters (Singlish or Tanglish), possibly mixed with English words.";
-const ROMANISED_FROM = 0.3;
+// So the first call also asks whether a Latin-script comment is English; anything that isn't clearly English is
+// converted (OpenAI) and checked a second time. Asking "is it English?" works better than "is it Singlish?": English
+// sentences score 0.98+, while single Sinhala words score 0.4–0.8 on both questions. English and native-script
+// comments stay at one Jev call. A short word list backs this up for slang the conversion gets wrong.
+const ENGLISH = "The comment is written in English (names, numbers and links aside).";
+const ENGLISH_FROM = 0.9;
 // Text already in Sinhala (U+0D80–0DFF) or Tamil (U+0B80–0BFF) script never needs converting.
 const NATIVE_SCRIPT = /[\u0D80-\u0DFF\u0B80-\u0BFF]/;
 // After conversion, civil comments scored 0.79 or higher and insults 0.47 or lower, so the line sits higher there.
@@ -76,14 +79,15 @@ export async function checkComment(proposal: ProposalText, text: string, replyin
   const latinOnly = !NATIVE_SCRIPT.test(text);
   const first = await askJev(proposal, text, replyingTo, latinOnly, CIVIL_BELOW);
   if (!first) return null;
-  if (!latinOnly || first.romanised < ROMANISED_FROM) return first.check;
+  if (latinOnly && hasRomanisedProfanity(text)) return { ...first.check, flag: first.check.flag ?? FLAG_LABELS.abusive };
+  if (!latinOnly || first.english >= ENGLISH_FROM) return first.check;
   const native = await summarise(TRANSLITERATE, text);
   if (!native || native.trim() === text.trim()) return first.check;
   const second = await askJev(proposal, native, replyingTo, false, CIVIL_BELOW_CONVERTED);
   return second?.check ?? first.check;
 }
 
-async function askJev(proposal: ProposalText, text: string, replyingTo: string | undefined, detectRomanised: boolean, civilBelow: number) {
+async function askJev(proposal: ProposalText, text: string, replyingTo: string | undefined, detectEnglish: boolean, civilBelow: number) {
   const r = await systemOne(
     {
       proposal: { title: proposal.title, summary: proposal.summary, text: proposal.body },
@@ -94,7 +98,7 @@ async function askJev(proposal: ProposalText, text: string, replyingTo: string |
       conduct: { type: "choice", instructions: CONDUCT_INSTRUCTIONS, criteria: CONDUCT },
       relevance: { type: "score", instructions: replyingTo ? "How closely does the comment relate to the proposal or the comment it replies to?" : "How closely does the comment relate to the proposal?", criteria: RELEVANCE },
       kind: { type: "choice", instructions: "What kind of point does the comment make about the proposal?", criteria: KIND },
-      ...(detectRomanised ? { romanised: { type: "noul" as const, instructions: ROMANISED } } : {}),
+      ...(detectEnglish ? { english: { type: "noul" as const, instructions: ENGLISH } } : {}),
     },
   );
   if (!r) return null;
@@ -112,7 +116,7 @@ async function askJev(proposal: ProposalText, text: string, replyingTo: string |
     relevance,
     offtopic,
   };
-  return { check, romanised: (r.answers.romanised as NoulAnswer | undefined)?.noul ?? 0 };
+  return { check, english: (r.answers.english as NoulAnswer | undefined)?.noul ?? 1 };
 }
 
 export type InsightKind = "concern" | "suggestion" | "clarification";

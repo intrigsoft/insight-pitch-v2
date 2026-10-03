@@ -147,6 +147,10 @@ test("insults written in Sinhala or Tamil with English letters are caught; polit
   await composer(page).fill("Palayan yanna ballo, umbala okkoma horu");
   await page.getByRole("button", { name: "Post comment" }).click();
   await expect(page.getByText("Edit it, or post it for moderator review.")).toBeVisible({ timeout: 20_000 });
+  // A single slang word, which once slipped through as merely "unrelated".
+  await composer(page).fill("Hukanawa");
+  await page.getByRole("button", { name: "Post comment" }).click();
+  await expect(page.getByText("Possible abusive language. Edit it, or post it for moderator review.")).toBeVisible({ timeout: 20_000 });
   await composer(page).fill("Indha hospital nalla idea, aana staff enga irundhu varuvaanga?");
   await page.getByRole("button", { name: "Post comment" }).click();
   await expect(page.getByRole("status").filter({ hasText: "Comment posted" })).toBeVisible({ timeout: 20_000 });

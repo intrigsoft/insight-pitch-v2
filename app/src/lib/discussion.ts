@@ -16,8 +16,11 @@ export async function latestVersion(proposalId: string) {
 // instead of asking Jev again for the same text.
 const checks = new Map<string, { at: number; check: CommentCheck | null }>();
 const CHECK_TTL_MS = 10 * 60_000;
+// Bump when the check's rules change so earlier results aren't reused.
+const CHECK_VERSION = 3;
 
 export async function checkCached(key: string, run: () => Promise<CommentCheck | null>) {
+  key = `v${CHECK_VERSION}:${key}`;
   const hit = checks.get(key);
   if (hit && Date.now() - hit.at < CHECK_TTL_MS) return hit.check;
   const check = await run();

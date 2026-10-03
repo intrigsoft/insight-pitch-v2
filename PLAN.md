@@ -83,6 +83,11 @@ Source design: claude.ai/design project "Insight Pitch proposal management"
   is romanised Sinhala or Tamil; if so, gpt-6-luna converts it to script and Jev checks it again, with the civil line
   at 0.6 instead of 0.5 (converted civil comments scored 0.79+, insults 0.47 or less). Result on a 24-comment test
   set: 24/24. Cost: romanised comments take about 3.5 s to check instead of 0.4 s.
+  Update: single slang words slipped through ("Hukanawa" came back only as "unrelated"), because Jev wasn't sure a
+  lone word was Singlish. The gate now converts any Latin-script comment Jev doesn't rate as clearly English (≥ 0.9;
+  English sentences score 0.98+), and `src/lib/romanised-profanity.ts` lists unambiguous Singlish/Tanglish swear
+  words (exact forms, so names like Hutton or Kariyawasam don't match) that are flagged outright. Moderators should
+  extend that list as they find new words.
 - **The moderator screen isn't in the design.** v3 says "Waiting for moderator review" but has nowhere to review,
   so Admin settings got a Moderation tab in the same style (held, hidden and reader-flagged comments; Approve / Remove).
 - **Insights.** Questions become clarifications; concerns and suggestions keep their kind; support and other
