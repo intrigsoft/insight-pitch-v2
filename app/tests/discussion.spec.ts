@@ -18,13 +18,13 @@ test("long threads collapse to the latest reply", async ({ page }) => {
 });
 
 test("post a comment", async ({ page }) => {
-  await expect(page.getByRole("heading", { name: /Discussion/ })).toContainText("9");
+  await expect(page.getByRole("tab", { name: /Discussion/ })).toContainText("12");
   const post = page.getByRole("button", { name: "Post comment" });
   await expect(post).toBeDisabled();
   await page.getByLabel("Add to the discussion").fill("Please publish the staffing plan alongside Phase 1.");
   await post.click();
   await expect(page.getByLabel("Add to the discussion")).toHaveValue("");
-  await expect(page.getByRole("heading", { name: /Discussion/ })).toContainText("10");
+  await expect(page.getByRole("tab", { name: /Discussion/ })).toContainText("13");
   const mine = thread(page, "Please publish the staffing plan");
   await expect(mine).toContainText("Maya Chen");
   await expect(mine).toContainText("Just now");
@@ -44,7 +44,7 @@ test("like and unlike a comment", async ({ page }) => {
 
 test("reply with Enter, mention prefill, and Escape to cancel", async ({ page }) => {
   const t = thread(page, "Who maintains the access road");
-  await t.locator(".reply").getByRole("button", { name: "Reply" }).click();
+  await t.locator(".reply").filter({ hasText: "Priya Raman" }).getByRole("button", { name: "Reply" }).click();
   const box = t.getByLabel("Write a reply");
   await expect(box).toHaveValue("@Priya Raman ");
   await box.press("Escape");
@@ -54,6 +54,7 @@ test("reply with Enter, mention prefill, and Escape to cancel", async ({ page })
   await t.getByLabel("Write a reply").fill("Thanks, that settles it for me.");
   await t.getByLabel("Write a reply").press("Enter");
   await expect(t.getByLabel("Write a reply")).toHaveCount(0);
-  await expect(t.locator(".reply")).toHaveCount(2);
+  // Jun's thread already has Priya's answer and Kai's hidden spam reply.
+  await expect(t.locator(".reply")).toHaveCount(3);
   await expect(t.locator(".reply").last()).toContainText("Thanks, that settles it for me.");
 });

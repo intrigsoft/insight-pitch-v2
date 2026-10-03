@@ -38,6 +38,15 @@ Source design: claude.ai/design project "Insight Pitch proposal management"
 - [x] Responsive check at phone width
 - [x] Final full walkthrough, README with setup steps, status summary below
 
+### v3: discussion moderation and insights (added 3 Oct)
+- [x] Discussion and Insights tabs, comment sort (most relevant, newest, oldest, most liked, most replies)
+- [x] Check before posting (Jev): rule problems → "Post for review" (held for moderators); off-topic → "Post anyway"; replies get the rule check
+- [x] Hidden comments with "Show anyway", reader flags with reasons, "Pending review" for the writer's own held comments
+- [x] Insights: grouped concerns / suggestions / clarifications, upvotes, "Raised by" links that jump to the comment, author marks clarifications answered
+- [x] Insights built automatically: Jev matches a new comment to an existing insight or starts a new one; OpenAI (gpt-6-luna) writes the one-line summary
+- [x] Moderation tab in Admin settings (approve / remove)
+- [x] Tests: 48 Playwright tests (9 new: moderation and insights, using the live Jev and OpenAI APIs)
+
 ## Decisions
 
 - **Jev is the reviewer.** The design captions scores "Extracted from the proposal by Jev". Publishing sends the
@@ -62,6 +71,22 @@ Source design: claude.ai/design project "Insight Pitch proposal management"
   horizontally scrollable streams table. Desktop screens match the design within 1–4% of pixels.
 - **Settings are admin-only** (gear button, menu item, page and server actions). Other users get an
   "Admins only" page.
+
+- **v3 moderation rules (defaults, adjustable later).** One Jev call per comment checks conduct, relevance and
+  kind, in about 0.3–0.6 s. A comment is flagged when Jev puts the chance it's civil below 50%, labelled with the
+  most likely rule (abusive, hostile, personal attack, unsupported accusation, spam, shouting). Off-topic means
+  relevance under 20/100. Flagged comments the writer still posts are held: only the writer and moderators see
+  them. Two different reader flags hide a visible comment behind "Hidden · reason · Show anyway" until a moderator
+  approves or removes it; one flag only sends it to the queue. Approving stops reader flags from hiding it again.
+- **The moderator screen isn't in the design.** v3 says "Waiting for moderator review" but has nowhere to review,
+  so Admin settings got a Moderation tab in the same style (held, hidden and reader-flagged comments; Approve / Remove).
+- **Insights.** Questions become clarifications; concerns and suggestions keep their kind; support and other
+  remarks don't create insights. Jev decides whether a new comment repeats an existing insight (choice question,
+  needs 60% confidence); otherwise gpt-6-luna writes a one-line summary in the comment's language, falling back to the
+  comment text if OpenAI fails. This runs after the response is sent, and the page refreshes itself a few seconds
+  later to show it. Removing a comment drops it as a source; an insight with no sources left is deleted.
+- **Seeded discussion analysis comes from the design.** The sample comments' kinds, relevance, flags and insights
+  are the v3 design's values. `npm run comments:analyze` runs Jev over any comment without an analysis.
 
 ## Status summary
 

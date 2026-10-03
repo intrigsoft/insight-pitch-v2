@@ -21,7 +21,7 @@ docker exec insight-pitch-pg psql -U insight -d insight_pitch -c "create databas
 
 # 2. App
 cd app
-cp .env.example .env          # add TYPESAFE_API_KEY to enable Jev scoring
+cp .env.example .env          # add TYPESAFE_API_KEY (Jev) and OPENAI_API_KEY (insight summaries)
 npm install
 npm run db:reset              # apply migrations and load the design's sample data
 npm run dev                   # http://localhost:3000
@@ -40,6 +40,7 @@ password, for example `priya.raman@insight.gov` (official) or `lena.fischer@exam
 | `npm run db:seed` | Replace all data with the design's sample data |
 | `npm run db:reset` | Migrate, then seed |
 | `npm run jev:rescore` | Score every published proposal's streams with Jev |
+| `npm run comments:analyze` | Run Jev over comments that have no analysis yet and add them to insights |
 | `npm run test:e2e` | Build the app and run all Playwright tests against the test database |
 | `npm run test:visual` | Only the visual comparison against the design screenshots |
 | `npm run design:refs` | Re-render the design reference screenshots from `design/` |
@@ -56,3 +57,11 @@ question per selected stream (a ten-level rubric) in a single call:
 
 If Jev is not configured or the call fails, the proposal still publishes with the author's scores and
 the score card says the review is pending. The interface never names Jev; it calls this step "review".
+
+## How comments are checked
+
+Every new comment goes through Jev before it posts: one call asks whether it breaks the discussion rules, how
+closely it relates to the proposal, and whether it's a question, concern, suggestion, support or other remark.
+Rule problems and off-topic comments get a warning the writer can act on; held comments wait in
+**Admin settings → Moderation**. Questions, concerns and suggestions feed the proposal's **Insights**, where Jev
+groups repeats and OpenAI (`gpt-6-luna`, set `OPENAI_MODEL` to change it) writes a one-line summary for new points.

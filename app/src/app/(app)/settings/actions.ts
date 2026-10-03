@@ -1,9 +1,11 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { after } from "next/server";
 import { eq, or, sql } from "drizzle-orm";
 import { db } from "@/db";
-import { proposalStreams, settings, streamLinks, streams } from "@/db/schema";
+import { comments, insightSources, proposalStreams, settings, streamLinks, streams } from "@/db/schema";
+import { addToInsights } from "@/lib/discussion";
 import { STREAM_COLORS } from "@/db/seed-data";
 import { isAdmin, requireUser } from "@/lib/auth";
 
@@ -81,6 +83,31 @@ export async function updateSetting(key: string, value: string | boolean): Promi
   await requireAdmin();
   if (!VALID[key]?.(value)) return { ok: false, error: "That setting value isn't allowed." };
   await db.insert(settings).values({ key, value }).onConflictDoUpdate({ target: settings.key, set: { value } });
+  revalidatePath("/", "layout");
+  return { ok: true };
+}
+
+/* Moderation */
+
+/** Publishes a held or hidden comment. Reader flags stop counting once a moderator has reviewed it. */
+export async function approveComment(id: string): Promise<Result> {
+  const admin = await requireAdmin();
+  const [c] = await db.select().from(comments).where(eq(comments.id, id)).limit(1);
+  if (!c || c.status === "removed") return { ok: false, error: "That comment no longer exists." };
+  await db.update(comments).set({ status: "visible", reviewedBy: admin.id, reviewedAt: new Date() }).where(eq(comments.id, id));
+  after(() => addToInsights(id).catch((e) => console.warn("[insights]", e)));
+  revalidatePath("/", "layout");
+  return { ok: true };
+}
+
+/** Takes a comment down. Insights it raised lose it as a source, and insights left with no source are removed. */
+export async function removeComment(id: string): Promise<Result> {
+  const admin = await requireAdmin();
+  const [c] = await db.select().from(comments).where(eq(comments.id, id)).limit(1);
+  if (!c) return { ok: false, error: "That comment no longer exists." };
+  await db.update(comments).set({ status: "removed", reviewedBy: admin.id, reviewedAt: new Date() }).where(eq(comments.id, id));
+  await db.delete(insightSources).where(eq(insightSources.commentId, id));
+  await db.execute(sql`delete from insights i where i.proposal_id = ${c.proposalId} and not exists (select 1 from insight_sources s where s.insight_id = i.id)`);
   revalidatePath("/", "layout");
   return { ok: true };
 }

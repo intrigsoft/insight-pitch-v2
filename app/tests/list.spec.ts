@@ -29,7 +29,7 @@ test("rows show badges, score chips, author, version and comment count", async (
   await expect(hospital).toContainText("Updated 2 days ago");
   await expect(hospital).toContainText("v3");
   await expect(hospital.locator(".score-chip")).toHaveText(["Healthcare9", "Finance6", "Transport3"]);
-  await expect(hospital.getByLabel("9 comments")).toBeVisible();
+  await expect(hospital.getByLabel("12 comments")).toBeVisible();
   await expect(rows(page).filter({ hasText: TITLES.telemedicine })).toContainText("Draft");
   await expect(rows(page).filter({ hasText: TITLES.telemedicine })).toContainText("Not published");
   await expect(rows(page).filter({ hasText: TITLES.legal })).toContainText("Unpublished changes");

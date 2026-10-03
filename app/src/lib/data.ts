@@ -1,9 +1,13 @@
 import "server-only";
-import { and, asc, eq, inArray, sql } from "drizzle-orm";
+import { and, asc, desc, eq, inArray, isNull, ne, or, sql } from "drizzle-orm";
 import { db } from "@/db";
 import {
+  commentFlags,
   commentLikes,
   comments,
+  insightSources,
+  insightVotes,
+  insights,
   follows,
   proposalDrafts,
   proposalStreams,
@@ -62,7 +66,11 @@ export async function getVisibleProposals(user: CurrentUser): Promise<ProposalSu
     db.select().from(proposalVersions).where(inArray(proposalVersions.proposalId, ids)),
     db.select().from(proposalDrafts).where(inArray(proposalDrafts.proposalId, ids)),
     db.select().from(proposalStreams).where(inArray(proposalStreams.proposalId, ids)),
-    db.select({ proposalId: comments.proposalId, n: sql<number>`count(*)::int` }).from(comments).where(inArray(comments.proposalId, ids)).groupBy(comments.proposalId),
+    db
+      .select({ proposalId: comments.proposalId, n: sql<number>`count(*)::int` })
+      .from(comments)
+      .where(and(inArray(comments.proposalId, ids), inArray(comments.status, ["visible", "flagged"])))
+      .groupBy(comments.proposalId),
     db.select({ proposalId: follows.proposalId }).from(follows).where(eq(follows.userId, user.id)),
   ]);
 
@@ -94,7 +102,22 @@ export type CommentNode = {
   createdAt: Date;
   likes: number;
   liked: boolean;
+  status: "visible" | "pending" | "flagged" | "removed";
+  flagReason: string | null;
+  kind: string | null;
+  relevance: number | null;
+  myFlag: string | null;
   replies: CommentNode[];
+};
+
+export type InsightItem = {
+  id: string;
+  kind: "concern" | "suggestion" | "clarification";
+  text: string;
+  answered: boolean;
+  votes: number;
+  voted: boolean;
+  sources: { commentId: string; parentId: string | null; firstName: string }[];
 };
 
 export type ProposalDetail = {
@@ -105,6 +128,7 @@ export type ProposalDetail = {
   scores: ScoreRow[];
   following: boolean;
   comments: CommentNode[];
+  insights: InsightItem[];
 };
 
 /** Returns null when the proposal doesn't exist or is someone else's unpublished draft. */
@@ -125,16 +149,24 @@ export async function getProposalDetail(id: string, user: CurrentUser): Promise<
     db.select().from(proposalStreams).where(eq(proposalStreams.proposalId, id)),
     db.select().from(follows).where(and(eq(follows.proposalId, id), eq(follows.userId, user.id))),
     db
-      .select({ id: comments.id, parentId: comments.parentId, body: comments.body, createdAt: comments.createdAt, authorId: users.id, name: users.name, initials: users.initials })
+      .select({
+        id: comments.id, parentId: comments.parentId, body: comments.body, createdAt: comments.createdAt, authorId: users.id, name: users.name, initials: users.initials,
+        status: comments.status, flagReason: comments.flagReason, kind: comments.kind, relevance: comments.relevance,
+      })
       .from(comments)
       .innerJoin(users, eq(users.id, comments.authorId))
-      .where(eq(comments.proposalId, id)),
+      // Held comments are visible to their author only; removed ones to nobody.
+      .where(and(eq(comments.proposalId, id), ne(comments.status, "removed"), or(ne(comments.status, "pending"), eq(comments.authorId, user.id)))),
   ]);
   if (versions.length === 0 && !mine) return null;
 
-  const likeRows = cmts.length
-    ? await db.select().from(commentLikes).where(inArray(commentLikes.commentId, cmts.map((c) => c.id)))
-    : [];
+  const cids = cmts.map((c) => c.id);
+  const [likeRows, myFlags] = cids.length
+    ? await Promise.all([
+        db.select().from(commentLikes).where(inArray(commentLikes.commentId, cids)),
+        db.select().from(commentFlags).where(and(inArray(commentFlags.commentId, cids), eq(commentFlags.userId, user.id))),
+      ])
+    : [[], []];
   const node = (c: (typeof cmts)[number]): CommentNode => ({
     id: c.id,
     author: { id: c.authorId, name: c.name, initials: c.initials },
@@ -142,6 +174,11 @@ export async function getProposalDetail(id: string, user: CurrentUser): Promise<
     createdAt: c.createdAt,
     likes: likeRows.filter((l) => l.commentId === c.id).length,
     liked: likeRows.some((l) => l.commentId === c.id && l.userId === user.id),
+    status: c.status,
+    flagReason: c.flagReason,
+    kind: c.kind,
+    relevance: c.relevance,
+    myFlag: myFlags.find((f) => f.commentId === c.id)?.reason ?? null,
     replies: [],
   });
   // Threads and replies read oldest first, as in the design.
@@ -149,6 +186,33 @@ export async function getProposalDetail(id: string, user: CurrentUser): Promise<
   for (const t of top) {
     t.replies = cmts.filter((c) => c.parentId === t.id).sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime()).map(node);
   }
+
+  // Insights only list sources the viewer can see; an insight with none left is dropped.
+  const shown = new Map(cmts.filter((c) => c.status !== "pending").map((c) => [c.id, c]));
+  const insightRows = versions.length ? await db.select().from(insights).where(eq(insights.proposalId, id)).orderBy(asc(insights.createdAt)) : [];
+  const insightIds = insightRows.map((i) => i.id);
+  const [sourceRows, voteRows] = insightIds.length
+    ? await Promise.all([
+        db.select().from(insightSources).where(inArray(insightSources.insightId, insightIds)),
+        db.select().from(insightVotes).where(inArray(insightVotes.insightId, insightIds)),
+      ])
+    : [[], []];
+  const insightList: InsightItem[] = insightRows
+    .map((i) => ({
+      id: i.id,
+      kind: i.kind,
+      text: i.text,
+      answered: i.answered,
+      votes: voteRows.filter((v) => v.insightId === i.id).length,
+      voted: voteRows.some((v) => v.insightId === i.id && v.userId === user.id),
+      sources: sourceRows
+        .filter((s) => s.insightId === i.id && shown.has(s.commentId))
+        .map((s) => {
+          const c = shown.get(s.commentId)!;
+          return { commentId: c.id, parentId: c.parentId, firstName: c.name.split(" ")[0] };
+        }),
+    }))
+    .filter((i) => i.sources.length > 0);
 
   const d = draftRows[0];
   return {
@@ -159,6 +223,7 @@ export async function getProposalDetail(id: string, user: CurrentUser): Promise<
     scores: scores.map(({ streamId, score, authorScore, jevScore, jevConfidence }) => ({ streamId, score, authorScore, jevScore, jevConfidence })),
     following: followRows.length > 0,
     comments: top,
+    insights: insightList,
   };
 }
 
@@ -177,4 +242,60 @@ export async function getStreamUsage() {
   }
   const countAll = (streamId: string) => all.filter((r) => r.streamId === streamId).length;
   return { publishedSets: [...byProposal.values()], countAll };
+}
+
+export type ModerationItem = {
+  id: string;
+  proposalId: string;
+  proposalTitle: string;
+  author: string;
+  body: string;
+  createdAt: Date;
+  status: "visible" | "pending" | "flagged";
+  flagReason: string | null;
+  flagSource: "jev" | "users" | null;
+  readerFlags: { reason: string; n: number }[];
+};
+
+/** Comments waiting for a moderator: held, hidden, or flagged by at least one reader and not reviewed since. */
+export async function getModerationQueue(): Promise<ModerationItem[]> {
+  const flagCounts = db
+    .select({ commentId: commentFlags.commentId, latest: sql<Date>`max(${commentFlags.createdAt})`.as("latest") })
+    .from(commentFlags)
+    .groupBy(commentFlags.commentId)
+    .as("fc");
+  const rows = await db
+    .select({
+      id: comments.id, proposalId: comments.proposalId, body: comments.body, createdAt: comments.createdAt, status: comments.status,
+      flagReason: comments.flagReason, flagSource: comments.flagSource, reviewedAt: comments.reviewedAt, author: users.name, latestFlag: flagCounts.latest,
+    })
+    .from(comments)
+    .innerJoin(users, eq(users.id, comments.authorId))
+    .leftJoin(flagCounts, eq(flagCounts.commentId, comments.id))
+    .where(
+      or(
+        inArray(comments.status, ["pending", "flagged"]),
+        and(eq(comments.status, "visible"), sql`${flagCounts.latest} is not null`, or(isNull(comments.reviewedAt), sql`${comments.reviewedAt} < ${flagCounts.latest}`)),
+      ),
+    )
+    .orderBy(desc(comments.createdAt));
+  if (!rows.length) return [];
+  const ids = rows.map((r) => r.id);
+  const pids = [...new Set(rows.map((r) => r.proposalId))];
+  const [reasons, titles] = await Promise.all([
+    db.select({ commentId: commentFlags.commentId, reason: commentFlags.reason, n: sql<number>`count(*)::int` }).from(commentFlags).where(inArray(commentFlags.commentId, ids)).groupBy(commentFlags.commentId, commentFlags.reason),
+    db.selectDistinctOn([proposalVersions.proposalId], { proposalId: proposalVersions.proposalId, title: proposalVersions.title }).from(proposalVersions).where(inArray(proposalVersions.proposalId, pids)).orderBy(proposalVersions.proposalId, desc(proposalVersions.number)),
+  ]);
+  return rows.map((r) => ({
+    id: r.id,
+    proposalId: r.proposalId,
+    proposalTitle: titles.find((t) => t.proposalId === r.proposalId)?.title ?? "",
+    author: r.author,
+    body: r.body,
+    createdAt: r.createdAt,
+    status: r.status as ModerationItem["status"],
+    flagReason: r.flagReason,
+    flagSource: r.flagSource,
+    readerFlags: reasons.filter((x) => x.commentId === r.id).map(({ reason, n }) => ({ reason, n })),
+  }));
 }

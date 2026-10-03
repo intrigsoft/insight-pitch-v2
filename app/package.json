@@ -14,7 +14,8 @@
     "test:e2e": "playwright test",
     "jev:rescore": "tsx --conditions=react-server scripts/jev-rescore.mts",
     "test:visual": "playwright test visual",
-    "design:refs": "tsx scripts/design-refs.mts"
+    "design:refs": "tsx scripts/design-refs.mts",
+    "comments:analyze": "tsx --conditions=react-server scripts/comments-analyze.mts"
   },
   "dependencies": {
     "bcryptjs": "^3.0.3",

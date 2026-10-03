@@ -96,6 +96,8 @@ export default async function ProposalPage({ params, searchParams }: PageProps<"
           <Discussion
             proposalId={p.id}
             canComment={Boolean(latest)}
+            isAuthor={mine}
+            insights={p.insights}
             commentCount={commentCount}
             me={{ id: user.id, initials: user.initials }}
             participants={[...new Set(participants)]}

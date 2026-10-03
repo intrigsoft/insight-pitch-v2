@@ -1,15 +1,16 @@
 import Link from "next/link";
 import { isAdmin, requireUser } from "@/lib/auth";
-import { getStreams, getStreamUsage } from "@/lib/data";
+import { getModerationQueue, getStreams, getStreamUsage } from "@/lib/data";
 import { getSettings } from "@/lib/settings";
 import { STREAM_COLORS } from "@/db/seed-data";
 import { StreamsTab } from "./StreamsTab";
 import { ScoringTab } from "./ScoringTab";
 import { LinkButton } from "./LinkButton";
+import { ModerationTab } from "./ModerationTab";
 
 export const metadata = { title: "Settings · Insight Pitch" };
 
-const TABS = [["streams", "Streams"], ["scoring", "Scoring"], ["overlaps", "Overlaps"]] as const;
+const TABS = [["streams", "Streams"], ["scoring", "Scoring"], ["overlaps", "Overlaps"], ["moderation", "Moderation"]] as const;
 
 export default async function SettingsPage({ searchParams }: PageProps<"/settings">) {
   const user = await requireUser();
@@ -24,7 +25,7 @@ export default async function SettingsPage({ searchParams }: PageProps<"/setting
   }
   const sp = await searchParams;
   const tab = (TABS.find(([id]) => id === sp.tab)?.[0] ?? "streams") as (typeof TABS)[number][0];
-  const [streams, usage, settings] = await Promise.all([getStreams(), getStreamUsage(), getSettings()]);
+  const [streams, usage, settings, queue] = await Promise.all([getStreams(), getStreamUsage(), getSettings(), getModerationQueue()]);
   const active = streams.filter((s) => s.active);
 
   // Overlap matrix: published proposals scored in both streams.
@@ -47,7 +48,9 @@ export default async function SettingsPage({ searchParams }: PageProps<"/setting
       </div>
       <nav className="settings-tabs" aria-label="Settings sections">
         {TABS.map(([id, label]) => (
-          <Link key={id} href={id === "streams" ? "/settings" : `/settings?tab=${id}`} className="settings-tab" aria-current={tab === id ? "page" : undefined} scroll={false}>{label}</Link>
+          <Link key={id} href={id === "streams" ? "/settings" : `/settings?tab=${id}`} className="settings-tab" aria-current={tab === id ? "page" : undefined} scroll={false}>
+            {label}{id === "moderation" && queue.length ? ` (${queue.length})` : ""}
+          </Link>
         ))}
       </nav>
 
@@ -56,6 +59,12 @@ export default async function SettingsPage({ searchParams }: PageProps<"/setting
       ) : null}
 
       {tab === "scoring" ? <ScoringTab settings={settings} /> : null}
+
+      {tab === "moderation" ? (
+        <ModerationTab
+          items={queue.map((q) => ({ ...q, createdAt: q.createdAt.toISOString() }))}
+        />
+      ) : null}
 
       {tab === "overlaps" ? (
         <div className="overlap-cols">

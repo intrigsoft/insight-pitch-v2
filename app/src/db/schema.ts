@@ -138,8 +138,76 @@ export const comments = pgTable(
       .references(() => users.id),
     body: text("body").notNull(),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    // visible: shown to everyone. pending: held for review, only the author and moderators see it.
+    // flagged: shown to others as a collapsed "Hidden" line. removed: taken down by a moderator.
+    status: text("status", { enum: ["visible", "pending", "flagged", "removed"] }).notNull().default("visible"),
+    flagReason: text("flag_reason"),
+    flagSource: text("flag_source", { enum: ["jev", "users"] }),
+    // Jev's reading of the comment: what kind of point it makes and how closely it relates to the proposal (0–100).
+    kind: text("kind", { enum: ["question", "concern", "suggestion", "support", "comment", "offtopic"] }),
+    relevance: integer("relevance"),
+    reviewedBy: uuid("reviewed_by").references(() => users.id),
+    reviewedAt: timestamp("reviewed_at", { withTimezone: true }),
   },
   (t) => [index("comments_proposal").on(t.proposalId)],
+);
+
+// Reader flags. Each person can flag a comment once.
+export const commentFlags = pgTable(
+  "comment_flags",
+  {
+    commentId: uuid("comment_id")
+      .notNull()
+      .references(() => comments.id, { onDelete: "cascade" }),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    reason: text("reason", { enum: ["Off-topic", "Inappropriate", "Spam", "Misleading"] }).notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [primaryKey({ columns: [t.commentId, t.userId] })],
+);
+
+// Points raised in the discussion, grouped by kind, each linked to the comments that raised it.
+export const insights = pgTable(
+  "insights",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    proposalId: uuid("proposal_id")
+      .notNull()
+      .references(() => proposals.id, { onDelete: "cascade" }),
+    kind: text("kind", { enum: ["concern", "suggestion", "clarification"] }).notNull(),
+    text: text("text").notNull(),
+    answered: boolean("answered").notNull().default(false),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index("insights_proposal").on(t.proposalId)],
+);
+
+export const insightSources = pgTable(
+  "insight_sources",
+  {
+    insightId: uuid("insight_id")
+      .notNull()
+      .references(() => insights.id, { onDelete: "cascade" }),
+    commentId: uuid("comment_id")
+      .notNull()
+      .references(() => comments.id, { onDelete: "cascade" }),
+  },
+  (t) => [primaryKey({ columns: [t.insightId, t.commentId] })],
+);
+
+export const insightVotes = pgTable(
+  "insight_votes",
+  {
+    insightId: uuid("insight_id")
+      .notNull()
+      .references(() => insights.id, { onDelete: "cascade" }),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+  },
+  (t) => [primaryKey({ columns: [t.insightId, t.userId] })],
 );
 
 export const commentLikes = pgTable(

@@ -12,6 +12,8 @@ export const PEOPLE = [
   { key: "sam", name: "Sam Whitfield", initials: "SW", email: "sam.whitfield@example.org", role: "citizen" },
   { key: "jun", name: "Jun Park", initials: "JP", email: "jun.park@example.org", role: "citizen" },
   { key: "ava", name: "Ava Moreau", initials: "AM", email: "ava.moreau@example.org", role: "citizen" },
+  { key: "kai", name: "Kai Moreno", initials: "KM", email: "kai.moreno@example.org", role: "citizen" },
+  { key: "rob", name: "Rob Kessler", initials: "RK", email: "rob.kessler@example.org", role: "citizen" },
 ] as const;
 
 export type PersonKey = (typeof PEOPLE)[number]["key"];
@@ -81,11 +83,14 @@ export const PROPOSALS: SeedProposal[] = [
       ]),
       cm("jun", "Who maintains the access road after construction? The last project left that unclear.", "1d", 4, [
         ["priya", "The provincial roads authority. I’ll name them explicitly in the next version.", "1d", 1],
+        ["kai", "Cheap bridging loans for contractors, message me at www.quickbuild-loans.example", "20h", 0],
       ]),
       cm("ava", "The capital estimate looks low compared with similar hospitals built in the last five years.", "20h", 2),
       cm("sam", "Could some beds be reserved for long-term care? The population is ageing faster than the forecasts assumed.", "6h", 1, [
         ["tomas", "Worth a separate proposal. It would change the finance score quite a bit.", "5h", 5],
       ]),
+      cm("kai", "Does anyone know when the summer festival dates get announced?", "10h", 0),
+      cm("rob", "Typical. Priya clearly has no idea what she’s doing and is padding her CV with this.", "3h", 0),
     ],
   },
   {
@@ -147,6 +152,47 @@ export const PROPOSALS: SeedProposal[] = [
     draft: { title: "Telemedicine kiosks for rural health centres", summary: "Connect rural nurses and patients to district hospital doctors by video.", body: P6draft, saved: "4d" },
   },
 ];
+
+// Jev's reading of the sample comments, from the v3 design: [text prefix, kind, relevance 0–100, flag].
+// Comments not listed are seeded without an analysis; `npm run comments:analyze` fills them in with Jev.
+export const COMMENT_ANALYSIS: [string, string, number, string?][] = [
+  ["Phasing makes", "support", 92],
+  ["Who maintains the access", "question", 88],
+  ["The capital estimate", "concern", 84],
+  ["Could some beds", "suggestion", 61],
+  ["Does anyone know when", "offtopic", 6],
+  ["Typical. Priya", "concern", 30, "Personal attack"],
+  ["Cheap bridging loans", "comment", 4, "Spam"],
+  ["A register is only useful", "suggestion", 86],
+  ["The 30-day deadline", "concern", 80],
+  ["Who checks food safety", "question", 74],
+  ["The finance score seems low", "concern", 58],
+  ["How will people without", "question", 82],
+  ["Would the desks also", "question", 85],
+  ["Law students would", "support", 64],
+  ["Moving coach parking", "concern", 83],
+];
+
+// Sample insights from the v3 design: [kind, text, votes, source comment prefixes, answered].
+export const INSIGHTS: Record<string, [string, string, number, string[], boolean?][]> = {
+  p1: [
+    ["concern", "No recruitment plan yet for the doctors and nurses the hospital needs", 9, ["Staffing is the real"]],
+    ["concern", "The capital estimate looks low against hospitals built in the last five years", 7, ["The capital estimate"]],
+    ["suggestion", "Reserve some beds for long-term care", 5, ["Could some beds", "Worth a separate"]],
+    ["clarification", "Who maintains the access road after construction?", 4, ["Who maintains the access"], true],
+  ],
+  p2: [
+    ["concern", "A 30-day deadline may be hard for smaller municipalities", 4, ["The 30-day deadline"]],
+    ["suggestion", "Require a standard open data format for published contracts", 3, ["A register is only"]],
+  ],
+  p3: [
+    ["concern", "The finance score looks low for a daily meal at this scale", 1, ["The finance score"]],
+    ["clarification", "Who checks food safety for the smaller suppliers?", 2, ["Who checks food"]],
+  ],
+  p8: [["clarification", "How will people without internet access check their titles?", 3, ["How will people"]]],
+  p5: [["clarification", "Will the desks cover family and tenancy cases?", 2, ["Would the desks"]]],
+  p4: [["concern", "Moving coach parking needs consultation with shop owners on the main square", 2, ["Moving coach parking"]]],
+};
 
 export const DEFAULT_SETTINGS = { scale: "10", scoredBy: "both", requireStream: true, showPublic: true } as const;
 

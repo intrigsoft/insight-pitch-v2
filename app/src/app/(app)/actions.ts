@@ -1,11 +1,15 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { after } from "next/server";
 import { and, eq, inArray, max } from "drizzle-orm";
 import { db } from "@/db";
 import {
+  commentFlags,
   commentLikes,
   comments,
+  insightVotes,
+  insights,
   follows,
   proposalDrafts,
   proposalStreams,
@@ -16,6 +20,8 @@ import {
 import { requireUser, type CurrentUser } from "@/lib/auth";
 import { getSettings, type AppSettings } from "@/lib/settings";
 import { scoreWithJev } from "@/lib/jev";
+import { checkComment } from "@/lib/comment-ai";
+import { addToInsights, applyUserFlags, checkCached, latestVersion } from "@/lib/discussion";
 
 type Result<T = object> = ({ ok: true } & T) | { ok: false; error: string };
 
@@ -45,18 +51,97 @@ export async function toggleFollow(proposalId: string): Promise<Result<{ followi
 
 /* Discussion */
 
-export async function postComment(proposalId: string, body: string, parentId?: string): Promise<Result> {
+export type PostResult =
+  | { ok: true; status: "visible" | "pending" }
+  | { ok: false; error: string }
+  | { ok: false; check: { flag: string | null; offtopic: boolean } };
+
+/**
+ * Posts a comment or reply after Jev has read it. If Jev sees a rule problem (or, for comments, that it's off-topic),
+ * nothing is saved: the writer gets a warning and must send again with `confirmed` to post. Confirmed comments with a
+ * rule problem are held for moderators and only their author sees them.
+ */
+export async function postComment(proposalId: string, body: string, parentId?: string, confirmed = false): Promise<PostResult> {
   const user = await requireUser();
   const text = body.trim();
   if (!text) return { ok: false, error: "Write something first." };
   if (text.length > 5000) return { ok: false, error: "Comments are limited to 5,000 characters." };
-  if (!(await isPublished(proposalId))) return { ok: false, error: "Comments open once the proposal is published." };
+  const version = await latestVersion(proposalId);
+  if (!version) return { ok: false, error: "Comments open once the proposal is published." };
+  let parentBody: string | undefined;
   if (parentId) {
     // Replies always attach to a top-level comment on the same proposal.
     const [parent] = await db.select().from(comments).where(eq(comments.id, parentId)).limit(1);
-    if (!parent || parent.proposalId !== proposalId || parent.parentId) return { ok: false, error: "That comment no longer exists." };
+    if (!parent || parent.proposalId !== proposalId || parent.parentId || parent.status === "removed") return { ok: false, error: "That comment no longer exists." };
+    parentBody = parent.body;
   }
-  await db.insert(comments).values({ proposalId, parentId: parentId ?? null, authorId: user.id, body: text });
+
+  const check = await checkCached(`${user.id}:${proposalId}:${parentId ?? ""}:${text}`, () => checkComment(version, text, parentBody));
+  const warn = Boolean(check && (check.flag || (!parentId && check.offtopic)));
+  if (warn && !confirmed) return { ok: false, check: { flag: check!.flag, offtopic: check!.offtopic } };
+
+  const status = check?.flag ? "pending" : "visible";
+  const [row] = await db
+    .insert(comments)
+    .values({
+      proposalId,
+      parentId: parentId ?? null,
+      authorId: user.id,
+      body: text,
+      status,
+      flagReason: check?.flag ?? null,
+      flagSource: check?.flag ? "jev" : null,
+      kind: check?.kind ?? null,
+      relevance: check?.relevance ?? null,
+    })
+    .returning({ id: comments.id });
+  if (status === "visible") after(() => addToInsights(row.id).catch((e) => console.warn("[insights]", e)));
+  revalidatePath("/", "layout");
+  return { ok: true, status };
+}
+
+/** Flags a comment for moderators with a reason, or withdraws the flag when `reason` is null. */
+export async function flagComment(commentId: string, reason: "Off-topic" | "Inappropriate" | "Spam" | "Misleading" | null): Promise<Result> {
+  const user = await requireUser();
+  const [c] = await db.select().from(comments).where(eq(comments.id, commentId)).limit(1);
+  if (!c || c.status === "removed") return { ok: false, error: "That comment no longer exists." };
+  if (c.authorId === user.id) return { ok: false, error: "You can't flag your own comment." };
+  const where = and(eq(commentFlags.commentId, commentId), eq(commentFlags.userId, user.id));
+  if (reason === null) await db.delete(commentFlags).where(where);
+  else if (!["Off-topic", "Inappropriate", "Spam", "Misleading"].includes(reason)) return { ok: false, error: "Pick a reason." };
+  else await db.insert(commentFlags).values({ commentId, userId: user.id, reason }).onConflictDoUpdate({ target: [commentFlags.commentId, commentFlags.userId], set: { reason } });
+  await applyUserFlags(commentId);
+  revalidatePath("/", "layout");
+  return { ok: true };
+}
+
+/* Insights */
+
+export async function voteInsight(insightId: string): Promise<Result<{ voted: boolean }>> {
+  const user = await requireUser();
+  const [ins] = await db.select({ id: insights.id }).from(insights).where(eq(insights.id, insightId)).limit(1);
+  if (!ins) return { ok: false, error: "That insight no longer exists." };
+  const where = and(eq(insightVotes.insightId, insightId), eq(insightVotes.userId, user.id));
+  const [existing] = await db.select().from(insightVotes).where(where).limit(1);
+  if (existing) await db.delete(insightVotes).where(where);
+  else await db.insert(insightVotes).values({ insightId, userId: user.id });
+  revalidatePath("/", "layout");
+  return { ok: true, voted: !existing };
+}
+
+/** Only the proposal's author can mark a clarification as answered. */
+export async function markAnswered(insightId: string, answered: boolean): Promise<Result> {
+  const user = await requireUser();
+  const [ins] = await db
+    .select({ kind: insights.kind, authorId: proposals.authorId })
+    .from(insights)
+    .innerJoin(proposals, eq(proposals.id, insights.proposalId))
+    .where(eq(insights.id, insightId))
+    .limit(1);
+  if (!ins) return { ok: false, error: "That insight no longer exists." };
+  if (ins.authorId !== user.id) return { ok: false, error: "Only the proposal's author can mark questions answered." };
+  if (ins.kind !== "clarification") return { ok: false, error: "Only clarifications can be marked answered." };
+  await db.update(insights).set({ answered }).where(eq(insights.id, insightId));
   revalidatePath("/", "layout");
   return { ok: true };
 }

@@ -28,6 +28,36 @@ export function jevConfigured() {
   return Boolean(process.env.TYPESAFE_API_KEY?.trim());
 }
 
+export type ChoiceAnswer = { type: "choice"; choice: string; confidence: number; probabilities: Record<string, number> };
+export type ScoreAnswer = { type: "score"; score: number; confidence: number; probabilities: Record<string, number> };
+export type NoulAnswer = { type: "noul"; noul: number };
+type Question =
+  | { type: "choice"; instructions: string; criteria: Record<string, string | null> }
+  | { type: "score"; instructions: string; criteria: string[] }
+  | { type: "noul"; instructions: string };
+
+/** One System One call. Returns null (and logs why) when Jev is unavailable, so callers can degrade gracefully. */
+export async function systemOne(state: unknown, questions: Record<string, Question>): Promise<{ model: string; answers: Record<string, ChoiceAnswer | ScoreAnswer | NoulAnswer> } | null> {
+  if (!jevConfigured()) return null;
+  try {
+    const res = await fetch(API_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${process.env.TYPESAFE_API_KEY}` },
+      body: JSON.stringify({ model: MODEL, state, questions }),
+      signal: AbortSignal.timeout(TIMEOUT_MS),
+    });
+    if (!res.ok) {
+      console.warn(`[jev] TypeSafe API ${res.status}: ${(await res.text()).slice(0, 200)}`);
+      return null;
+    }
+    const data = await res.json();
+    return { model: data.model ?? MODEL, answers: data.answers ?? {} };
+  } catch (e) {
+    console.warn("[jev] request failed:", e instanceof Error ? e.message : e);
+    return null;
+  }
+}
+
 export async function scoreWithJev(
   proposal: { title: string; summary: string; body: string },
   streams: StreamForScoring[],
