@@ -17,11 +17,11 @@ export async function contentTranslator(target: string, fallbackLang: string, it
     missing,
     /** The text in the reader's language if available, and whether it was translated. */
     get(text: string, lang: string | null | undefined) {
-      if (!text || (lang ?? fallbackLang) === target) return { text, translated: false, cached: false, reviewed: false, fresh: false };
+      if (!text || (lang ?? fallbackLang) === target) return { text, translated: false, cached: false, reviewed: false, fresh: false, needsCheck: false };
       const hit = cached.get(text);
       return hit
-        ? { text: hit.text, translated: hit.text !== text, cached: true, reviewed: hit.reviewed, fresh: Date.now() - hit.createdAt.getTime() < FRESH_MS }
-        : { text, translated: false, cached: false, reviewed: false, fresh: false };
+        ? { text: hit.text, translated: hit.text !== text, cached: true, reviewed: hit.reviewed, fresh: Date.now() - hit.createdAt.getTime() < FRESH_MS, needsCheck: hit.needsCheck }
+        : { text, translated: false, cached: false, reviewed: false, fresh: false, needsCheck: false };
     },
   };
 }

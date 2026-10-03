@@ -5,6 +5,8 @@ import { db } from "@/db";
 import { translations } from "@/db/schema";
 import { catalogEntry } from "./languages";
 import { getSettings } from "./settings";
+import { FIDELITY_MIN, jevFidelity, problemNote } from "./translation-check";
+import { leftoverScript } from "./script-check";
 
 // Shared translation cache plus OpenAI (gpt-6-luna) for anything not cached yet. Every text is cached per target
 // language by a hash of its exact wording, so unchanged paragraphs are never translated twice.
@@ -15,7 +17,7 @@ const TIMEOUT_MS = 60_000;
 
 export const textHash = (text: string) => createHash("sha256").update(text).digest("base64url").slice(0, 22);
 
-export type Cached = { text: string; reviewed: boolean; createdAt: Date };
+export type Cached = { text: string; reviewed: boolean; createdAt: Date; fidelity: number | null; needsCheck: boolean };
 
 /** Cached translations for these texts into `lang`, keyed by the source text. Missing texts are left out. */
 export async function cachedTranslations(lang: string, texts: string[]): Promise<Map<string, Cached>> {
@@ -24,10 +26,18 @@ export async function cachedTranslations(lang: string, texts: string[]): Promise
   if (!unique.length) return out;
   const byHash = new Map(unique.map((t) => [textHash(t), t]));
   const rows = await db
-    .select({ hash: translations.hash, text: translations.text, reviewedAt: translations.reviewedAt, createdAt: translations.createdAt })
+    .select({ hash: translations.hash, text: translations.text, reviewedAt: translations.reviewedAt, createdAt: translations.createdAt, fidelity: translations.fidelity, checkNote: translations.checkNote })
     .from(translations)
     .where(and(eq(translations.lang, lang), inArray(translations.hash, [...byHash.keys()])));
-  for (const r of rows) out.set(byHash.get(r.hash)!, { text: r.text, reviewed: Boolean(r.reviewedAt), createdAt: r.createdAt });
+  for (const r of rows)
+    out.set(byHash.get(r.hash)!, {
+      text: r.text,
+      reviewed: Boolean(r.reviewedAt),
+      createdAt: r.createdAt,
+      fidelity: r.fidelity,
+      // Flagged when the automatic check still found a problem after the retry (and no person has reviewed it).
+      needsCheck: !r.reviewedAt && (Boolean(r.checkNote) || (r.fidelity != null && r.fidelity < FIDELITY_MIN)),
+    });
   return out;
 }
 
@@ -52,9 +62,10 @@ export async function translateMissing(lang: string, texts: string[], purpose: "
           const batch = missing.slice(i, i + BATCH);
           const result = await callOpenAI(target.name, target.native, batch, glossary, purpose);
           if (!result) throw new Error("translation failed");
+          const checked = purpose === "content" ? await checkAndRetry(lang, target.name, target.native, batch, result, glossary) : batch.map((_, j) => ({ text: result[j], fidelity: null, note: null }));
           await db
             .insert(translations)
-            .values(batch.map((t, j) => ({ lang, hash: textHash(t), text: result[j], model: MODEL })))
+            .values(batch.map((t, j) => ({ lang, hash: textHash(t), text: checked[j].text, model: MODEL, fidelity: checked[j].fidelity, checkNote: checked[j].note })))
             .onConflictDoNothing();
         }
       })().finally(() => inFlight.delete(key)),
@@ -69,6 +80,41 @@ export async function translateMissing(lang: string, texts: string[], purpose: "
   }
 }
 
+type Checked = { text: string; fidelity: number | null; note: string | null };
+
+/** Runs the script check and Jev on each translation; anything that fails is translated once more with the problem named. */
+async function checkAndRetry(lang: string, name: string, native: string, sources: string[], out: string[], glossary: string[]): Promise<Checked[]> {
+  const check = async (src: string, text: string) => {
+    const leftover = leftoverScript(src, text, lang);
+    const f = await jevFidelity(src, text, name);
+    return { f, note: problemNote(f, leftover) };
+  };
+  const first = await mapLimit(sources, 6, (src, j) => check(src, out[j]));
+  const retryIdx = first.map((c, j) => (c.note ? j : -1)).filter((j) => j >= 0);
+  const final: Checked[] = first.map((c, j) => ({ text: out[j], fidelity: c.f?.score ?? null, note: c.note }));
+  if (!retryIdx.length) return final;
+  await mapLimit(retryIdx, 6, async (j) => {
+    const again = await callOpenAI(name, native, [sources[j]], glossary, "content", first[j].note!);
+    if (!again) return;
+    const c = await check(sources[j], again[0]);
+    // Keep whichever version Jev rates higher; the note records any problem that remains for human review.
+    if ((c.f?.score ?? 0) >= (first[j].f?.score ?? 0)) final[j] = { text: again[0], fidelity: c.f?.score ?? null, note: c.note };
+  });
+  return final;
+}
+
+async function mapLimit<T, R>(items: T[], limit: number, fn: (item: T, i: number) => Promise<R>): Promise<R[]> {
+  const out = new Array<R>(items.length);
+  let next = 0;
+  await Promise.all(Array.from({ length: Math.min(limit, items.length) }, async () => {
+    while (next < items.length) {
+      const i = next++;
+      out[i] = await fn(items[i], i);
+    }
+  }));
+  return out;
+}
+
 export async function machineTranslate(lang: string, texts: string[], purpose: "content" | "interface"): Promise<string[] | null> {
   const target = catalogEntry(lang);
   if (!target) return null;
@@ -76,17 +122,18 @@ export async function machineTranslate(lang: string, texts: string[], purpose: "
   return callOpenAI(target.name, target.native, texts, glossary, purpose);
 }
 
-async function callOpenAI(name: string, native: string, texts: string[], glossary: string[], purpose: "content" | "interface"): Promise<string[] | null> {
+async function callOpenAI(name: string, native: string, texts: string[], glossary: string[], purpose: "content" | "interface", fixNote?: string): Promise<string[] | null> {
   const context =
     purpose === "interface"
       ? "These are interface labels, buttons and messages from a public consultation web app. Keep them short and natural for an app interface. Keep placeholders in curly braces, like {n} or {name}, exactly as written."
       : "This is content from a public consultation platform where citizens and officials discuss government proposals. Use a clear, neutral register suited to public administration.";
   const instructions =
     `Translate each string in the JSON array into ${name} (${native}). ${context} ` +
-    "Keep all numbers, percentages, amounts, dates and units exactly as written. Keep @mentions of people unchanged. " +
+    "Keep every number, percentage and date value exactly as written, but translate the words around them, including currency and unit words (for example 'million', 'rupees', 'km'). Keep @mentions of people unchanged. " +
     "Keep a leading '## ' marker if present. If a string is already in the target language, return it unchanged. " +
     (glossary.length ? `Never translate these terms: ${glossary.join(", ")}. ` : "") +
-    "Return the translations in the same order, one per input string.";
+    "Return the translations in the same order, one per input string." +
+    (fixNote ? ` A previous translation of this text had a problem: ${fixNote} Correct it.` : "");
   try {
     const res = await fetch("https://api.openai.com/v1/responses", {
       method: "POST",

@@ -118,6 +118,13 @@ Source design: claude.ai/design project "Insight Pitch proposal management"
   instead of the prototype's per-browser localStorage. New versions are translated in the background when published;
   anything missing is translated the first time someone reads it, with the "Translating…" banner meanwhile. Drafts
   aren't translated (only their author sees them).
+- **Every translation is checked before it's cached.** An instant script check catches words left in the source
+  language (it caught "85 மில்லியன் ரூபாய்" left in Tamil inside a Sinhala translation), and Jev scores each section's
+  faithfulness out of 4 plus whether numbers match and nothing is missing. In testing, good Sinhala and Tamil
+  translations scored 3.5–3.8 and broken ones (changed amount, dropped sentence, reversed meaning, wrong paragraph)
+  0.1–1.95, so anything under 2.5 is retranslated once with the problem named. If it still fails, the banner says
+  "N sections may need a human check" with a **Needs a check** tag until someone marks it reviewed. The translation
+  prompt now keeps digits but translates currency and unit words. Interface strings aren't checked this way.
 - **Reviewing translations.** Admins, officials and the proposal's author can mark a proposal's translation as
   reviewed; the reviewer is stored per paragraph.
 - **The moderator screen isn't in the design.** v3 says "Waiting for moderator review" but has nowhere to review,

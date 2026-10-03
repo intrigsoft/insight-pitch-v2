@@ -29,6 +29,13 @@
       "when": 1791024133648,
       "tag": "0003_default_languages",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1791026846756,
+      "tag": "0004_translation_checks",
+      "breakpoints": true
     }
   ]
 }

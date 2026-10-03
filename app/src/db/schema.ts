@@ -253,6 +253,9 @@ export const translations = pgTable(
     hash: text("hash").notNull(),
     text: text("text").notNull(),
     model: text("model").notNull(),
+    // Jev's faithfulness score for this translation (0–4) and what the automatic check found, if anything.
+    fidelity: real("fidelity"),
+    checkNote: text("check_note"),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     reviewedBy: uuid("reviewed_by").references(() => users.id, { onDelete: "set null" }),
     reviewedAt: timestamp("reviewed_at", { withTimezone: true }),

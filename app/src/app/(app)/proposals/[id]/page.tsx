@@ -85,6 +85,7 @@ export default async function ProposalPage({ params, searchParams }: PageProps<"
     const total = parts.length, done = parts.filter((x) => x.cached).length, ready = done === total;
     const fresh = parts.filter((x) => x.fresh).length;
     const reviewed = parts.filter((x) => x.reviewed).length;
+    const needsCheck = parts.filter((x) => x.needsCheck).length;
     const canReview = user.role !== "citizen" || mine;
     banner = showOriginal
       ? { state: "original", head: t("tx.showingOriginal", { lang: from }), sub: t("tx.showingOriginalSub", { lang: to }), toggleLabel: t("tx.showTranslation", { lang: to }), toggleHref: query({ original: null }) }
@@ -92,9 +93,17 @@ export default async function ProposalPage({ params, searchParams }: PageProps<"
         ? {
             state: "ready",
             head: t("tx.translatedBy", { from, to }),
-            sub: (fresh === 0 ? t("tx.fromCache") : t("tx.justNow")) + (reviewed && reviewed < total ? " " + t("tx.notReviewed", { n: total - reviewed }) : ""),
-            chip: settings.txLabel ? (reviewed === total ? t("tx.reviewed") : reviewed ? t("tx.reviewedSome", { n: reviewed, total }) : t("tx.machine")) : undefined,
-            chipReviewed: reviewed === total,
+            sub:
+              (fresh === 0 ? t("tx.fromCache") : t("tx.justNow")) +
+              (reviewed && reviewed < total ? " " + t("tx.notReviewed", { n: total - reviewed }) : "") +
+              (needsCheck ? " " + tn("tx.needsCheckSub", needsCheck) : ""),
+            chip: needsCheck
+              ? t("tx.needsCheck")
+              : settings.txLabel
+                ? reviewed === total ? t("tx.reviewed") : reviewed ? t("tx.reviewedSome", { n: reviewed, total }) : t("tx.machine")
+                : undefined,
+            chipReviewed: reviewed === total && !needsCheck,
+            chipWarn: needsCheck > 0,
             toggleLabel: t("tx.showOriginal", { lang: from }),
             toggleHref: query({ original: "1" }),
             review: canReview && reviewed < total ? { proposalId: p.id, lang: viewLang, texts: proposalTexts } : undefined,
