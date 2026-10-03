@@ -50,7 +50,7 @@ test("publishing a new version requires a note and keeps history", async ({ page
   test.setTimeout(90_000);
   await openProposal(page, TITLES.legal);
   await page.getByRole("link", { name: "Continue draft" }).click();
-  await expect(page.getByText("Editing v2 draft")).toBeVisible();
+  await expect(page.getByText("Editing v2 draft", { exact: true })).toBeVisible();
   await expect(page.getByText("Published v1 · draft of v2 in progress")).toBeVisible();
   await expect(page.getByText("Required. v1–v1 stay readable in version history.")).toBeVisible();
   await page.getByRole("button", { name: "Publish v2" }).click();
@@ -75,7 +75,7 @@ test("cancel and back links return without saving", async ({ page }) => {
   await expect(page.locator("a.row").filter({ hasText: "Throwaway idea" })).toHaveCount(0);
   await openProposal(page, TITLES.telemedicine);
   await page.getByRole("link", { name: "Continue draft" }).click();
-  await expect(page.getByText("Editing draft")).toBeVisible();
+  await expect(page.getByText("Editing draft", { exact: true })).toBeVisible();
   await page.getByRole("link", { name: "Back to proposal" }).click();
   await expect(page.getByRole("heading", { level: 1, name: TITLES.telemedicine })).toBeVisible();
 });

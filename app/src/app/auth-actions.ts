@@ -6,34 +6,38 @@ import { eq } from "drizzle-orm";
 import { db } from "@/db";
 import { users } from "@/db/schema";
 import { endSession, initialsFor, startSession, verifyLogin } from "@/lib/auth";
+import { getI18n, getLang } from "@/i18n/server";
 
 export type FormState = { error?: string; info?: string; email?: string; name?: string };
 
 const EMAIL_RE = /.+@.+\..+/;
 
 export async function login(_prev: FormState, form: FormData): Promise<FormState> {
+  const { t } = await getI18n();
   const email = String(form.get("email") ?? "").trim();
   const password = String(form.get("password") ?? "");
-  if (!EMAIL_RE.test(email)) return { error: "Enter a valid email address.", email };
-  if (!password) return { error: "Enter your password.", email };
+  if (!EMAIL_RE.test(email)) return { error: t("auth.errEmail"), email };
+  if (!password) return { error: t("auth.errPassword"), email };
   const user = await verifyLogin(email, password);
-  if (!user) return { error: "That email and password don't match an account.", email };
+  if (!user) return { error: t("auth.errMismatch"), email };
   await startSession(user.id);
   redirect("/");
 }
 
 export async function signup(_prev: FormState, form: FormData): Promise<FormState> {
+  const { t } = await getI18n();
   const name = String(form.get("name") ?? "").trim();
   const email = String(form.get("email") ?? "").trim().toLowerCase();
   const password = String(form.get("password") ?? "");
-  if (!name) return { error: "Enter your full name.", email, name };
-  if (!EMAIL_RE.test(email)) return { error: "Enter a valid email address.", email, name };
-  if (password.length < 8) return { error: "Use a password of at least 8 characters.", email, name };
+  if (!name) return { error: t("auth.errName"), email, name };
+  if (!EMAIL_RE.test(email)) return { error: t("auth.errEmail"), email, name };
+  if (password.length < 8) return { error: t("auth.errPasswordLength"), email, name };
   const [existing] = await db.select({ id: users.id }).from(users).where(eq(users.email, email)).limit(1);
-  if (existing) return { error: "An account with this email already exists. Sign in instead.", email, name };
+  if (existing) return { error: t("auth.errExists"), email, name };
   const [u] = await db
     .insert(users)
-    .values({ name, email, initials: initialsFor(name), role: "citizen", passwordHash: await bcrypt.hash(password, 10) })
+    // New accounts keep the language they signed up in.
+    .values({ name, email, initials: initialsFor(name), role: "citizen", language: await getLang(), passwordHash: await bcrypt.hash(password, 10) })
     .returning({ id: users.id });
   await startSession(u.id);
   redirect("/");

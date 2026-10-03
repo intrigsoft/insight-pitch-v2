@@ -6,8 +6,11 @@ import { useEffect, useRef, useState } from "react";
 import type { CurrentUser } from "@/lib/auth";
 import { logout } from "@/app/auth-actions";
 import { PlusIcon, SearchIcon, SlidersIcon } from "./icons";
+import { useI18n } from "@/i18n/client";
+import { LanguageMenu, type MenuLanguage } from "./LanguageMenu";
 
-export function Header({ user }: { user: CurrentUser }) {
+export function Header({ user, languages, defaultLanguage }: { user: CurrentUser; languages: MenuLanguage[]; defaultLanguage: string }) {
+  const { t } = useI18n();
   const router = useRouter();
   const pathname = usePathname();
   const params = useSearchParams();
@@ -46,27 +49,28 @@ export function Header({ user }: { user: CurrentUser }) {
   return (
     <header className="header">
       <div className="header-inner">
-        <Link href="/" className="logo" aria-label="Insight Pitch home"><span className="l1">Insight</span><span className="l2">Pitch</span></Link>
+        <Link href="/" className="logo" aria-label={t("brand.home")} lang="en"><span className="l1">Insight</span><span className="l2">Pitch</span></Link>
         <form className="search" role="search" onSubmit={(e) => e.preventDefault()}>
           <SearchIcon />
-          <input value={query} onChange={(e) => onQuery(e.target.value)} placeholder="Search proposals, people, streams" aria-label="Search proposals, people, streams" />
+          <input value={query} onChange={(e) => onQuery(e.target.value)} placeholder={t("header.search")} aria-label={t("header.search")} />
         </form>
         <div className="spacer" />
-        <Link href="/proposals/new" className="btn-primary btn-new" aria-label="New proposal"><PlusIcon /><span className="new-label">New proposal</span></Link>
+        <LanguageMenu languages={languages} defaultLanguage={defaultLanguage} canManage={isAdmin} />
+        <Link href="/proposals/new" className="btn-primary btn-new" aria-label={t("header.newProposal")}><PlusIcon /><span className="new-label">{t("header.newProposal")}</span></Link>
         {isAdmin ? (
-          <Link href="/settings" className="icon-btn" title="Admin settings" aria-label="Admin settings" aria-current={pathname.startsWith("/settings") ? "page" : undefined}><SlidersIcon /></Link>
+          <Link href="/settings" className="icon-btn" title={t("header.adminSettings")} aria-label={t("header.adminSettings")} aria-current={pathname.startsWith("/settings") ? "page" : undefined}><SlidersIcon /></Link>
         ) : null}
         <div className="menu-wrap" ref={menuRef}>
-          <button className="avatar-btn" onClick={() => setMenuOpen((o) => !o)} aria-haspopup="menu" aria-expanded={menuOpen} aria-label="Account menu">{user.initials}</button>
+          <button className="avatar-btn" onClick={() => setMenuOpen((o) => !o)} aria-haspopup="menu" aria-expanded={menuOpen} aria-label={t("header.accountMenu")}>{user.initials}</button>
           {menuOpen ? (
             <div className="menu" role="menu">
               <div className="menu-head">
-                <div className="who">{user.name}<span className="role">{user.role}</span></div>
+                <div className="who">{user.name}<span className="role">{t(`role.${user.role}`)}</span></div>
                 <div className="mail">{user.email}</div>
               </div>
-              <Link role="menuitem" href="/?tab=mine" className="menu-item" onClick={() => setMenuOpen(false)}>My proposals</Link>
-              {isAdmin ? <Link role="menuitem" href="/settings" className="menu-item" onClick={() => setMenuOpen(false)}>Admin settings</Link> : null}
-              <form action={logout}><button role="menuitem" type="submit" className="menu-item danger">Sign out</button></form>
+              <Link role="menuitem" href="/?tab=mine" className="menu-item" onClick={() => setMenuOpen(false)}>{t("header.myProposals")}</Link>
+              {isAdmin ? <Link role="menuitem" href="/settings" className="menu-item" onClick={() => setMenuOpen(false)}>{t("header.adminSettings")}</Link> : null}
+              <form action={logout}><button role="menuitem" type="submit" className="menu-item danger">{t("header.signOut")}</button></form>
             </div>
           ) : null}
         </div>

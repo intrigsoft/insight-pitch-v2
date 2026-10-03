@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
 import { Geist, Newsreader, Noto_Sans_Sinhala, Noto_Sans_Tamil, Noto_Serif_Sinhala, Noto_Serif_Tamil } from "next/font/google";
+import { getI18n } from "@/i18n/server";
+import { I18nProvider } from "@/i18n/client";
 import "./globals.css";
 
 const geist = Geist({ variable: "--font-geist", subsets: ["latin"], weight: ["400", "500", "600"] });
@@ -17,11 +19,16 @@ export const metadata: Metadata = {
   description: "Draft public proposals, publish them for discussion, and keep every version on the record.",
 };
 
-export default function RootLayout({ children }: LayoutProps<"/">) {
+export default async function RootLayout({ children }: LayoutProps<"/">) {
+  const { lang, locale, dir, messages } = await getI18n();
   const fonts = [geist, newsreader, sansSinhala, sansTamil, serifSinhala, serifTamil].map((f) => f.variable).join(" ");
   return (
-    <html lang="en" className={fonts}>
-      <body>{children}</body>
+    <html lang={lang} dir={dir} className={fonts}>
+      <body>
+        <I18nProvider lang={lang} locale={locale} dir={dir} messages={messages}>
+          {children}
+        </I18nProvider>
+      </body>
     </html>
   );
 }

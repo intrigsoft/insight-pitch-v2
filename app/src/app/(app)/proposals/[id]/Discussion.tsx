@@ -3,8 +3,13 @@
 import { useRouter } from "next/navigation";
 import { useEffect, useOptimistic, useRef, useState, useTransition } from "react";
 import { useToast } from "@/components/Toast";
+import { useTxActivity } from "@/components/TxActivity";
+import { Globe } from "@/components/LanguageMenu";
 import { HeartIcon } from "@/components/icons";
+import { useI18n } from "@/i18n/client";
+import type { MessageKey } from "@/i18n/en";
 import { shortAgo } from "@/lib/format";
+import { translateTexts } from "@/app/tx-actions";
 import { flagComment, markAnswered, postComment, toggleLike, voteInsight } from "../../actions";
 
 type C = {
@@ -17,6 +22,7 @@ type C = {
   status: "visible" | "pending" | "flagged" | "removed";
   flagReason: string | null;
   relevance: number | null;
+  language: string | null;
   myFlag: string | null;
   replies: C[];
 };
@@ -31,6 +37,15 @@ type Insight = {
   sources: { commentId: string; parentId: string | null; firstName: string }[];
 };
 
+type Translation = {
+  enabled: boolean;
+  label: boolean;
+  viewLang: string;
+  defaultLang: string;
+  insightsLang: string;
+  languages: { code: string; native: string }[];
+};
+
 type Props = {
   proposalId: string;
   canComment: boolean;
@@ -40,24 +55,31 @@ type Props = {
   participants: string[];
   comments: C[];
   insights: Insight[];
+  translation: Translation;
 };
 
 type Sort = "relevant" | "newest" | "oldest" | "liked" | "replies";
 type Check = { text: string; flag: string | null; offtopic: boolean };
 const REASONS = ["Off-topic", "Inappropriate", "Spam", "Misleading"] as const;
 const GROUPS = [
-  ["concern", "Concerns", "#b07a1f"],
-  ["suggestion", "Suggestions", "#2f7680"],
-  ["clarification", "Clarifications", "#3b6a8f"],
+  ["concern", "ins.concerns", "#b07a1f"],
+  ["suggestion", "ins.suggestions", "#2f7680"],
+  ["clarification", "ins.clarifications", "#3b6a8f"],
 ] as const;
 
 const WarnIcon = () => (
   <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" aria-hidden="true"><path d="M12 3 2 20h20L12 3z" /><path d="M12 10v4M12 17v.5" /></svg>
 );
+const Chevron = () => (
+  <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6" /></svg>
+);
 
-export function Discussion({ proposalId, canComment, isAuthor, commentCount, me, participants, comments, insights }: Props) {
+export function Discussion({ proposalId, canComment, isAuthor, commentCount, me, participants, comments, insights, translation }: Props) {
   const toast = useToast();
   const router = useRouter();
+  const i18n = useI18n();
+  const { t, tn } = i18n;
+  const { track } = useTxActivity();
   const [pending, start] = useTransition();
   const [tab, setTab] = useState<"discussion" | "insights">("discussion");
   const [sort, setSort] = useState<Sort>("relevant");
@@ -70,6 +92,12 @@ export function Discussion({ proposalId, canComment, isAuthor, commentCount, me,
   const [revealed, setRevealed] = useState<Record<string, boolean>>({});
   const [flagMenu, setFlagMenu] = useState<string | null>(null);
   const [highlight, setHighlight] = useState<string | null>(null);
+  // Translation: the whole discussion into the reading language, or single comments into any enabled language.
+  const [translateAll, setTranslateAll] = useState(false);
+  const [commentLang, setCommentLang] = useState<Record<string, string>>({});
+  const [txMenu, setTxMenu] = useState<string | null>(null);
+  const [tx, setTx] = useState<Record<string, Record<string, string>>>({});
+  const [txBusy, setTxBusy] = useState(0);
   const timers = useRef<ReturnType<typeof setTimeout>[]>([]);
   useEffect(() => () => timers.current.forEach(clearTimeout), []);
   const later = (fn: () => void, ms: number) => timers.current.push(setTimeout(fn, ms));
@@ -80,6 +108,60 @@ export function Discussion({ proposalId, canComment, isAuthor, commentCount, me,
     return state.map(flip);
   });
   const [ins, flipVote] = useOptimistic(insights, (state, id: string) => state.map((i) => (i.id === id ? { ...i, voted: !i.voted, votes: i.votes + (i.voted ? -1 : 1) } : i)));
+
+  const { viewLang, defaultLang } = translation;
+  const langOf = (c: C) => c.language ?? defaultLang;
+  const native = (code: string) => translation.languages.find((l) => l.code === code)?.native ?? code;
+  const all = view.flatMap((c) => [c, ...c.replies]);
+  const needsTx = (c: C) => langOf(c) !== viewLang;
+  const canTranslateAll = translation.enabled && (all.some(needsTx) || (ins.length > 0 && translation.insightsLang !== viewLang));
+
+  // On failure the comments go back to their original text, so nothing is left stuck on "Translating…".
+  const requestTx = (lang: string, texts: string[], onFail: () => void) => {
+    const missing = [...new Set(texts.filter((x) => x && !tx[lang]?.[x]))];
+    if (!missing.length) return;
+    setTxBusy((b) => b + 1);
+    track(translateTexts(lang, missing))
+      .then((r) => {
+        setTx((cur) => ({ ...cur, [lang]: { ...cur[lang], ...r.result } }));
+        if (!r.ok) {
+          toast(t("tx.failedToast"));
+          onFail();
+        }
+      })
+      .catch(() => {
+        toast(t("tx.failedToast"));
+        onFail();
+      })
+      .finally(() => setTxBusy((b) => b - 1));
+  };
+
+  const toggleTranslateAll = () => {
+    const next = !translateAll;
+    setTranslateAll(next);
+    if (next)
+      requestTx(viewLang, [...all.filter(needsTx).map((c) => c.body), ...(translation.insightsLang !== viewLang ? ins.map((i) => i.text) : [])], () => setTranslateAll(false));
+  };
+
+  const chooseCommentLang = (c: C, code: string) => {
+    setTxMenu(null);
+    setCommentLang((m) => ({ ...m, [c.id]: code }));
+    if (code !== langOf(c))
+      requestTx(code, [c.body], () => setCommentLang((m) => {
+        const next = { ...m };
+        delete next[c.id];
+        return next;
+      }));
+  };
+
+  /** The comment's text in the language it should show in, and whether that's a translation. */
+  const shownText = (c: C) => {
+    const target = commentLang[c.id] ?? (translateAll ? viewLang : langOf(c));
+    if (target === langOf(c)) return { text: c.body, target, translated: false, busy: false };
+    const hit = tx[target]?.[c.body];
+    return { text: hit ?? c.body, target, translated: Boolean(hit && hit !== c.body), busy: !hit };
+  };
+  const insightText = (i: Insight) => (translateAll && translation.insightsLang !== viewLang ? tx[viewLang]?.[i.text] ?? i.text : i.text);
 
   const showInsights = tab === "insights" && ins.length > 0;
   const hiddenForMe = (c: C) => (c.status === "flagged" && c.author.id !== me.id ? 1 : 0);
@@ -95,6 +177,7 @@ export function Discussion({ proposalId, canComment, isAuthor, commentCount, me,
 
   // New insights are built in the background after a comment posts; pick them up a moment later.
   const refreshSoon = () => later(() => router.refresh(), 4000);
+  const reasonLabel = (r: string | null) => (r ? t(`flag.${r}` as MessageKey) : "");
 
   const like = (id: string) =>
     start(async () => {
@@ -113,7 +196,7 @@ export function Discussion({ proposalId, canComment, isAuthor, commentCount, me,
       if (!r.ok) return toast(r.error);
       setNewComment("");
       setCheck(null);
-      toast(r.status === "pending" ? "Submitted for review. Only you can see it for now." : "Comment posted");
+      toast(r.status === "pending" ? t("disc.heldForReview") : t("disc.posted"));
       if (r.status === "visible") refreshSoon();
     });
   };
@@ -130,7 +213,7 @@ export function Discussion({ proposalId, canComment, isAuthor, commentCount, me,
       setReplyText("");
       setReplyCheck(null);
       setExpanded((e) => ({ ...e, [parentId]: true }));
-      if (r.status === "pending") toast("Reply held for moderator review");
+      if (r.status === "pending") toast(t("disc.replyHeld"));
       else refreshSoon();
     });
   };
@@ -139,7 +222,7 @@ export function Discussion({ proposalId, canComment, isAuthor, commentCount, me,
     start(async () => {
       setFlagMenu(null);
       const r = await flagComment(id, reason);
-      toast(r.ok ? (reason ? "Flagged. A moderator will review it." : "Flag removed") : r.error);
+      toast(r.ok ? (reason ? t("disc.flaggedToast") : t("disc.flagRemoved")) : r.error);
     });
 
   const vote = (id: string) =>
@@ -152,7 +235,7 @@ export function Discussion({ proposalId, canComment, isAuthor, commentCount, me,
   const mark = (id: string, answered: boolean) =>
     start(async () => {
       const r = await markAnswered(id, answered);
-      toast(r.ok ? (answered ? "Marked as answered" : "Marked as unanswered") : r.error);
+      toast(r.ok ? (answered ? t("ins.markedAnswered") : t("ins.markedUnanswered")) : r.error);
     });
 
   // "Raised by Sam" jumps to that comment in the discussion and highlights it.
@@ -168,9 +251,9 @@ export function Discussion({ proposalId, canComment, isAuthor, commentCount, me,
   };
 
   // "@Daniel Okafor the board said…" renders the name as a mention.
-  const splitMention = (t: string) => {
-    const m = participants.map((n) => "@" + n).find((n) => t.startsWith(n + " ") || t === n);
-    return m ? { mention: m, body: t.slice(m.length).trim() } : { mention: "", body: t };
+  const splitMention = (s: string) => {
+    const m = participants.map((n) => "@" + n).find((n) => s.startsWith(n + " ") || s === n);
+    return m ? { mention: m, body: s.slice(m.length).trim() } : { mention: "", body: s };
   };
 
   const renderBody = (c: C, isReply: boolean) => {
@@ -179,52 +262,87 @@ export function Discussion({ proposalId, canComment, isAuthor, commentCount, me,
     if (c.status === "flagged" && !mine && !revealed[c.id]) {
       return (
         <div className="hidden-line">
-          <span className="lbl"><WarnIcon />Hidden · {c.flagReason}</span>
-          Waiting for moderator review.
-          <button onClick={() => setRevealed((r) => ({ ...r, [c.id]: true }))}>Show anyway</button>
+          <span className="lbl"><WarnIcon />{t("disc.hidden", { reason: reasonLabel(c.flagReason) })}</span>
+          {t("disc.waitingReview")}
+          <button onClick={() => setRevealed((r) => ({ ...r, [c.id]: true }))}>{t("disc.showAnyway")}</button>
         </div>
       );
     }
-    const note = c.status === "pending" ? "Pending review · only you can see this" : flagged ? `Flagged · ${c.flagReason} · under review` : "";
-    const { mention, body } = isReply ? splitMention(c.body) : { mention: "", body: c.body };
+    const note = c.status === "pending" ? t("disc.pendingMine") : flagged ? t("disc.flaggedNote", { reason: reasonLabel(c.flagReason) }) : "";
+    const s = shownText(c);
+    const { mention, body } = isReply ? splitMention(s.text) : { mention: "", body: s.text };
     return (
       <div className={`bubble${flagged ? " flagged" : ""}${highlight === c.id ? " highlight" : ""}`}>
         {note ? <div className="flag-note"><WarnIcon />{note}</div> : null}
         <div className="an">{c.author.name}</div>
-        <div className="tx">{mention ? <span className="mention">{mention} </span> : null}{body}</div>
+        <div className="tx" lang={s.translated ? s.target : langOf(c)}>{mention ? <span className="mention">{mention} </span> : null}{body}</div>
       </div>
     );
   };
 
-  const renderActions = (c: C, onReply: () => void) => {
+  const relevance = (c: C) => {
+    if (c.relevance == null || c.status === "pending") return null;
+    const level = c.relevance >= 70 ? 3 : c.relevance >= 35 ? 2 : 1;
+    const title = t(level === 3 ? "disc.relHigh" : level === 2 ? "disc.relMedium" : "disc.relLow");
+    return (
+      <span className={`rel${level === 1 ? " low" : ""}`} title={title}>
+        <span className="bars" aria-hidden="true">{[1, 2, 3].map((i) => <span key={i} className={i <= level ? "on" : ""} style={{ height: 3 + i * 3 }} />)}</span>
+        {t("disc.relevant", { n: c.relevance })}
+      </span>
+    );
+  };
+
+  const renderActions = (c: C, onReply: () => void, isReply: boolean) => {
     const mine = c.author.id === me.id;
     const interactive = canComment && c.status !== "pending";
+    const s = shownText(c);
+    const translatable = translation.enabled && translation.languages.length > 1 && c.status !== "pending";
+    const txLabel = s.target === langOf(c) ? t("view.translate") : s.busy ? t("header.translating") : native(s.target);
     return (
       <>
         <div className="cmt-actions">
-          <span>{shortAgo(new Date(c.createdAt))}</span>
+          <span>{shortAgo(new Date(c.createdAt), i18n)}</span>
+          {s.translated && translation.label && !(c.status === "flagged" && !mine && !revealed[c.id]) ? <span className="tx-note">{t("disc.translated")}</span> : null}
           {interactive ? (
             <>
-              <button aria-pressed={c.liked} onClick={() => like(c.id)}>Like</button>
-              <button onClick={onReply}>Reply</button>
+              <button aria-pressed={c.liked} onClick={() => like(c.id)}>{t("disc.like")}</button>
+              <button onClick={onReply}>{t("disc.reply")}</button>
               {!mine ? (
                 <button
                   className={c.myFlag ? "flagged" : undefined}
                   aria-expanded={flagMenu === c.id}
                   onClick={() => (c.myFlag ? flag(c.id, null) : setFlagMenu(flagMenu === c.id ? null : c.id))}
                 >
-                  {c.myFlag ? "Flagged" : "Flag"}
+                  {c.myFlag ? t("disc.flagged") : t("disc.flag")}
                 </button>
               ) : null}
             </>
           ) : null}
-          {c.likes > 0 ? <span className="likes" aria-label={`${c.likes} likes`}><HeartIcon />{c.likes}</span> : null}
+          {translatable ? (
+            <span className="cmt-tx">
+              <button className={s.target !== langOf(c) ? "on" : undefined} aria-haspopup="menu" aria-expanded={txMenu === c.id} onClick={() => setTxMenu(txMenu === c.id ? null : c.id)}>
+                {txLabel}<Chevron />
+              </button>
+              {txMenu === c.id ? (
+                <div className="menu cmt-tx-menu" role="menu">
+                  <div className="menu-label">{t("disc.translateTo")}</div>
+                  {[langOf(c), ...translation.languages.map((l) => l.code).filter((x) => x !== langOf(c))].map((code) => (
+                    <button key={code} role="menuitemradio" aria-checked={code === s.target} className="lang-item small" onClick={() => chooseCommentLang(c, code)}>
+                      <span lang={code}>{code === langOf(c) ? t("disc.originalLang", { lang: native(code) }) : native(code)}</span>
+                    </button>
+                  ))}
+                </div>
+              ) : null}
+            </span>
+          ) : null}
+          {!isReply ? relevance(c) : null}
+          {c.likes > 0 ? <span className={`likes${isReply ? " push" : ""}`} aria-label={tn("disc.likes", c.likes)}><HeartIcon />{c.likes}</span> : null}
         </div>
         {flagMenu === c.id ? (
-          <div className="flag-menu" role="group" aria-label="Flag as">
-            <span>Flag as</span>
-            {REASONS.map((r) => <button key={r} className="reason" onClick={() => flag(c.id, r)}>{r}</button>)}
-            <button className="cancel" onClick={() => setFlagMenu(null)}>Cancel</button>
+          <div className="flag-menu" role="group" aria-label={t("disc.flagAs")}>
+            <span>{t("disc.flagAs")}</span>
+            {REASONS.map((r) => <button key={r} className="reason" onClick={() => flag(c.id, r)}>{t(`reason.${r}`)}</button>)}
+            <button className="cancel" onClick={() => setFlagMenu(null)}>{t("disc.cancel")}</button>
           </div>
         ) : null}
       </>
@@ -232,32 +350,40 @@ export function Discussion({ proposalId, canComment, isAuthor, commentCount, me,
   };
 
   return (
-    <section className="discussion" aria-label="Discussion">
+    <section className="discussion" aria-label={t("disc.discussion")}>
       <div className="disc-head">
         <div className={`disc-tabs${ins.length ? " has-insights" : ""}`} role="tablist">
-          <button role="tab" className="disc-tab" aria-selected={!showInsights} onClick={() => setTab("discussion")}>Discussion <span>{commentCount}</span></button>
+          <button role="tab" className="disc-tab" aria-selected={!showInsights} onClick={() => setTab("discussion")}>{t("disc.discussion")} <span>{commentCount}</span></button>
           {ins.length ? (
-            <button role="tab" className="disc-tab" aria-selected={showInsights} onClick={() => setTab("insights")}>Insights <span>{ins.length}</span></button>
+            <button role="tab" className="disc-tab" aria-selected={showInsights} onClick={() => setTab("insights")}>{t("disc.insights")} <span>{ins.length}</span></button>
           ) : null}
         </div>
-        {!showInsights && view.length > 1 ? (
-          <label className="sort">
-            Sort
-            <select value={sort} onChange={(e) => setSort(e.target.value as Sort)} aria-label="Sort comments">
-              <option value="relevant">Most relevant</option>
-              <option value="newest">Newest first</option>
-              <option value="oldest">Oldest first</option>
-              <option value="liked">Most liked</option>
-              <option value="replies">Most replies</option>
-            </select>
-          </label>
-        ) : null}
+        <div className="disc-tools">
+          {canTranslateAll ? (
+            <button className={`disc-tx${translateAll ? " on" : ""}`} onClick={toggleTranslateAll}>
+              <Globe size={14} />
+              {translateAll ? (txBusy ? t("disc.translatingDiscussion") : t("disc.showOriginalComments")) : t("disc.translateDiscussion")}
+            </button>
+          ) : null}
+          {!showInsights && view.length > 1 ? (
+            <label className="sort">
+              {t("list.sort")}
+              <select value={sort} onChange={(e) => setSort(e.target.value as Sort)} aria-label={t("disc.sortComments")}>
+                <option value="relevant">{t("disc.sortRelevant")}</option>
+                <option value="newest">{t("disc.sortNewest")}</option>
+                <option value="oldest">{t("disc.sortOldest")}</option>
+                <option value="liked">{t("disc.sortLiked")}</option>
+                <option value="replies">{t("disc.sortReplies")}</option>
+              </select>
+            </label>
+          ) : null}
+        </div>
       </div>
 
       {showInsights ? (
-        <div className="insights" role="tabpanel" aria-label="Insights">
-          <div className="intro">Points raised in the discussion, grouped by type. Upvote the ones you want the author to address first.</div>
-          {GROUPS.map(([kind, label, dot]) => {
+        <div className="insights" role="tabpanel" aria-label={t("disc.insights")}>
+          <div className="intro">{t("ins.intro")}</div>
+          {GROUPS.map(([kind, labelKey, dot]) => {
             const items = ins.filter((i) => i.kind === kind).sort((a, b) => Number(a.answered) - Number(b.answered) || b.votes - a.votes);
             if (!items.length) return null;
             const nAnswered = items.filter((i) => i.answered).length;
@@ -265,33 +391,33 @@ export function Discussion({ proposalId, canComment, isAuthor, commentCount, me,
               <div className="insight-group" key={kind} data-testid={`insights-${kind}`}>
                 <div className="ghead">
                   <span className="dot dot-8" style={{ background: dot }} />
-                  <span className="eyebrow">{label}</span>
-                  <span className="n">{items.length}{nAnswered ? ` · ${nAnswered} answered` : ""}</span>
+                  <span className="eyebrow">{t(labelKey)}</span>
+                  <span className="n">{items.length}{nAnswered ? ` · ${t("ins.answeredCount", { n: nAnswered })}` : ""}</span>
                 </div>
                 <div className="insight-list">
                   {items.map((i) => (
                     <div className={`insight${i.answered ? " answered" : ""}`} key={i.id} data-testid="insight">
-                      <button className="vote" aria-pressed={i.voted} title="Upvote" aria-label={`Upvote: ${i.votes} votes`} onClick={() => vote(i.id)}>
+                      <button className="vote" aria-pressed={i.voted} title={t("ins.upvote")} aria-label={t("ins.votes", { n: i.votes })} onClick={() => vote(i.id)}>
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="m6 15 6-6 6 6" /></svg>
                         {i.votes}
                       </button>
                       <div className="body">
-                        <div className="txt">{i.text}</div>
+                        <div className="txt">{insightText(i)}</div>
                         <div className="meta">
                           {i.answered ? (
                             <span className="answered-tag">
                               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="m5 12 5 5 9-10" /></svg>
-                              Answered
+                              {t("ins.answered")}
                             </span>
                           ) : null}
-                          Raised by
+                          {t("ins.raisedBy")}
                           {i.sources.map((s, si) => (
                             <button key={s.commentId} className="src" onClick={() => jump(s)}>{s.firstName}{si < i.sources.length - 1 ? "," : ""}</button>
                           ))}
                         </div>
                       </div>
                       {isAuthor && kind === "clarification" ? (
-                        <button className={`mark-btn${i.answered ? " undo" : ""}`} onClick={() => mark(i.id, !i.answered)}>{i.answered ? "Mark unanswered" : "Mark answered"}</button>
+                        <button className={`mark-btn${i.answered ? " undo" : ""}`} onClick={() => mark(i.id, !i.answered)}>{i.answered ? t("ins.markUnanswered") : t("ins.markAnswered")}</button>
                       ) : null}
                     </div>
                   ))}
@@ -302,7 +428,7 @@ export function Discussion({ proposalId, canComment, isAuthor, commentCount, me,
         </div>
       ) : (
         <>
-          {!canComment ? <div className="closed">Comments open once the proposal is published.</div> : null}
+          {!canComment ? <div className="closed">{t("disc.closed")}</div> : null}
           {canComment ? (
             <div className="composer">
               <span className="avatar av-38 avatar-me">{me.initials}</span>
@@ -310,8 +436,8 @@ export function Discussion({ proposalId, canComment, isAuthor, commentCount, me,
                 <textarea
                   value={newComment}
                   onChange={(e) => setNewComment(e.target.value)}
-                  placeholder="Add to the discussion…"
-                  aria-label="Add to the discussion"
+                  placeholder={t("disc.placeholder")}
+                  aria-label={t("disc.placeholder")}
                   rows={2}
                   onKeyDown={(e) => { if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) post(); }}
                 />
@@ -320,14 +446,12 @@ export function Discussion({ proposalId, canComment, isAuthor, commentCount, me,
                     {activeCheck ? (
                       <>
                         <WarnIcon />
-                        {activeCheck.flag
-                          ? `Possible ${activeCheck.flag.toLowerCase()}. Edit it, or post it for moderator review.`
-                          : "This looks unrelated to the proposal. Edit it, or post anyway."}
+                        {activeCheck.flag ? t("disc.warnFlag", { reason: reasonLabel(activeCheck.flag).toLowerCase() }) : t("disc.warnOfftopic")}
                       </>
                     ) : null}
                   </span>
                   <button className="post-btn" onClick={post} disabled={!text || pending}>
-                    {pending && !replyTo ? "Checking…" : activeCheck ? (activeCheck.flag ? "Post for review" : "Post anyway") : "Post comment"}
+                    {pending && !replyTo ? t("disc.checking") : activeCheck ? (activeCheck.flag ? t("disc.postForReview") : t("disc.postAnyway")) : t("disc.post")}
                   </button>
                 </div>
               </div>
@@ -345,21 +469,19 @@ export function Discussion({ proposalId, canComment, isAuthor, commentCount, me,
                     <span className={`avatar av-38${c.author.id === me.id ? " avatar-me" : ""}`}>{c.author.initials}</span>
                     <div className="cmt-body">
                       {renderBody(c, false)}
-                      {renderActions(c, () => { setReplyTo(c.id); setReplyText(""); setReplyCheck(null); })}
+                      {renderActions(c, () => { setReplyTo(c.id); setReplyText(""); setReplyCheck(null); }, false)}
                     </div>
                   </div>
                   <div className="replies">
                     {hidden > 0 ? (
-                      <button className="expand-btn" onClick={() => setExpanded((e) => ({ ...e, [c.id]: true }))}>
-                        View {hidden} earlier {hidden === 1 ? "reply" : "replies"}
-                      </button>
+                      <button className="expand-btn" onClick={() => setExpanded((e) => ({ ...e, [c.id]: true }))}>{tn("disc.viewEarlier", hidden)}</button>
                     ) : null}
                     {shownReplies.map((r) => (
                       <div className="cmt reply" key={r.id} id={`cmt-${r.id}`}>
                         <span className={`avatar av-30${r.author.id === me.id ? " avatar-me" : ""}`}>{r.author.initials}</span>
                         <div className="cmt-body">
                           {renderBody(r, true)}
-                          {renderActions(r, () => { setReplyTo(c.id); setReplyCheck(null); setReplyText(r.author.id === me.id ? "" : `@${r.author.name} `); })}
+                          {renderActions(r, () => { setReplyTo(c.id); setReplyCheck(null); setReplyText(r.author.id === me.id ? "" : `@${r.author.name} `); }, true)}
                         </div>
                       </div>
                     ))}
@@ -376,14 +498,14 @@ export function Discussion({ proposalId, canComment, isAuthor, commentCount, me,
                               if (e.key === "Enter") { e.preventDefault(); submitReply(c.id); }
                               if (e.key === "Escape") { setReplyTo(null); setReplyCheck(null); }
                             }}
-                            placeholder="Write a reply… (Enter to send)"
-                            aria-label="Write a reply"
+                            placeholder={t("disc.replyPlaceholder")}
+                            aria-label={t("disc.writeReply")}
                           />
-                          <button className="send" onClick={() => submitReply(c.id)} disabled={pending}>{activeReplyCheck ? "Post for review" : "Reply"}</button>
-                          <button className="cancel" onClick={() => { setReplyTo(null); setReplyText(""); setReplyCheck(null); }}>Cancel</button>
+                          <button className="send" onClick={() => submitReply(c.id)} disabled={pending}>{activeReplyCheck ? t("disc.postForReview") : t("disc.reply")}</button>
+                          <button className="cancel" onClick={() => { setReplyTo(null); setReplyText(""); setReplyCheck(null); }}>{t("disc.cancel")}</button>
                         </div>
                         {activeReplyCheck?.flag ? (
-                          <div className="reply-warn" role="status"><WarnIcon />Possible {activeReplyCheck.flag.toLowerCase()}. Send again to post it for moderator review.</div>
+                          <div className="reply-warn" role="status"><WarnIcon />{t("disc.replyWarn", { reason: reasonLabel(activeReplyCheck.flag).toLowerCase() })}</div>
                         ) : null}
                       </div>
                     ) : null}

@@ -45,7 +45,7 @@ test("own published proposal with a draft offers to continue it", async ({ page 
   const pending = page.getByRole("navigation", { name: "Version history" }).getByRole("link", { name: /Unpublished draft/ });
   await expect(pending).toContainText("Saved yesterday · Continue editing");
   await pending.click();
-  await expect(page.getByText("Editing v2 draft")).toBeVisible();
+  await expect(page.getByText("Editing v2 draft", { exact: true })).toBeVisible();
 });
 
 test("an unpublished draft is private and closed for comments", async ({ page, browser }) => {

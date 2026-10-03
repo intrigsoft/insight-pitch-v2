@@ -21,6 +21,8 @@ export const users = pgTable("users", {
   name: text("name").notNull(),
   initials: text("initials").notNull(),
   role: text("role", { enum: ["admin", "official", "citizen"] }).notNull().default("citizen"),
+  // Reading and interface language (a code from the languages table).
+  language: text("language").notNull().default("en"),
   passwordHash: text("password_hash").notNull(),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
@@ -78,6 +80,8 @@ export const proposalVersions = pgTable(
     summary: text("summary").notNull(),
     body: text("body").notNull(),
     note: text("note").notNull(),
+    // Language the version is written in; translations are made from it. Null until detected.
+    language: text("language"),
     publishedAt: timestamp("published_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [unique("proposal_versions_number").on(t.proposalId, t.number)],
@@ -145,6 +149,7 @@ export const comments = pgTable(
     flagSource: text("flag_source", { enum: ["jev", "users"] }),
     // Jev's reading of the comment: what kind of point it makes and how closely it relates to the proposal (0–100).
     kind: text("kind", { enum: ["question", "concern", "suggestion", "support", "comment", "offtopic"] }),
+    language: text("language"),
     relevance: integer("relevance"),
     reviewedBy: uuid("reviewed_by").references(() => users.id),
     reviewedAt: timestamp("reviewed_at", { withTimezone: true }),
@@ -227,3 +232,30 @@ export const settings = pgTable("settings", {
   key: text("key").primaryKey(),
   value: jsonb("value").notNull(),
 });
+
+// Languages readers can switch to. The default language (a setting) can't be disabled or removed.
+export const languages = pgTable("languages", {
+  code: text("code").primaryKey(),
+  name: text("name").notNull(),
+  native: text("native").notNull(),
+  rtl: boolean("rtl").notNull().default(false),
+  enabled: boolean("enabled").notNull().default(true),
+  position: integer("position").notNull().default(0),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+// Shared translation cache: one row per source text (by hash) per target language. Reused by every reader and
+// every version until the source text changes. Interface strings use the same cache for runtime-translated languages.
+export const translations = pgTable(
+  "translations",
+  {
+    lang: text("lang").notNull(),
+    hash: text("hash").notNull(),
+    text: text("text").notNull(),
+    model: text("model").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    reviewedBy: uuid("reviewed_by").references(() => users.id, { onDelete: "set null" }),
+    reviewedAt: timestamp("reviewed_at", { withTimezone: true }),
+  },
+  (t) => [primaryKey({ columns: [t.lang, t.hash] })],
+);

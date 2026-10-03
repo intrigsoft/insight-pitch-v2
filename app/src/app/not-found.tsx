@@ -1,11 +1,13 @@
 import Link from "next/link";
+import { getI18n } from "@/i18n/server";
 
-export default function NotFound() {
+export default async function NotFound() {
+  const { t } = await getI18n();
   return (
     <main className="simple-page">
-      <h1>Not found</h1>
-      <p>This proposal doesn&apos;t exist, or it&apos;s a draft that only its author can see.</p>
-      <Link href="/" className="btn-secondary">Back to proposals</Link>
+      <h1>{t("notFound.title")}</h1>
+      <p>{t("notFound.text")}</p>
+      <Link href="/" className="btn-secondary">{t("set.backToProposals")}</Link>
     </main>
   );
 }

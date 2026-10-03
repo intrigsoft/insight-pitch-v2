@@ -4,7 +4,9 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { BackIcon } from "@/components/icons";
+import { Globe } from "@/components/LanguageMenu";
 import { useToast } from "@/components/Toast";
+import { useI18n } from "@/i18n/client";
 import { formatScore, scaleSuffix, type Scale } from "@/lib/scale";
 import { publish, saveDraft } from "@/app/(app)/actions";
 
@@ -19,12 +21,15 @@ export type EditorProps = {
   streams: EditorStream[];
   scale: Scale;
   scoredBy: "author" | "reviewers" | "both";
+  /** Native names of the languages a published version is translated into, if translating on publish. */
+  translateInto: string[];
 };
 
 export function Editor(props: EditorProps) {
   const { id, latestVersion: L, streams, scale, scoredBy } = props;
   const router = useRouter();
   const toast = useToast();
+  const { t, tn } = useI18n();
   const [pending, start] = useTransition();
   const [title, setTitle] = useState(props.initial.title);
   const [summary, setSummary] = useState(props.initial.summary);
@@ -35,6 +40,7 @@ export function Editor(props: EditorProps) {
   const [saved, setSaved] = useState<string | null>(props.savedLabel);
 
   const n = (L ?? 0) + 1;
+  const vn = `v${n}`;
   const authorScores = scoredBy !== "reviewers";
   const sfx = scaleSuffix(scale);
   const items = streams.filter((s) => s.active || scores[s.id] != null);
@@ -46,8 +52,8 @@ export function Editor(props: EditorProps) {
     start(async () => {
       const r = await saveDraft(input());
       if (!r.ok) return setError(r.error);
-      setSaved("just now");
-      toast("Draft saved");
+      setSaved(t("ago.justNow"));
+      toast(t("ed.draftSaved"));
       if (!id) router.replace(`/proposals/${r.id}/edit`);
       else router.refresh();
     });
@@ -56,43 +62,39 @@ export function Editor(props: EditorProps) {
     start(async () => {
       const r = await publish(input());
       if (!r.ok) return setError(r.error);
-      toast(`Published v${r.version}` + (r.jev === "unavailable" ? " · automatic scoring unavailable, author scores kept" : ""));
+      const version = `v${r.version}`;
+      toast(
+        (r.translating ? tn("ed.publishedTranslating", r.translating, { version }) : t("ed.publishedToast", { version })) +
+          (r.jev === "unavailable" ? " · " + t("ed.jevUnavailable") : ""),
+      );
       router.push(`/proposals/${r.id}`);
     });
 
-  const statusText = !id
-    ? "New · not saved yet"
-    : L
-      ? `Published v${L}` + (props.hasDraft ? ` · draft of v${n} in progress` : "")
-      : "Draft · not published";
-  const scoreHint = authorScores
-    ? scoredBy === "both"
-      ? "Pick the streams this affects and suggest a score. Reviewers confirm after publishing."
-      : "Pick the streams this affects and score the impact on each."
-    : "Pick the streams this affects. Reviewers assign scores after publishing.";
+  const statusText = !id ? t("ed.statusNew") : L ? t("ed.statusPublished", { version: `v${L}` }) + (props.hasDraft ? " · " + t("ed.statusDraftOf", { version: vn }) : "") : t("ed.statusDraft");
+  const scoreHint = authorScores ? (scoredBy === "both" ? t("ed.hintBoth") : t("ed.hintAuthor")) : t("ed.hintReviewers");
 
   return (
     <main className="edit-main" data-screen-label="Editor">
       <div className="edit-bar">
-        <Link href={id ? `/proposals/${id}` : "/"} className="back-link"><BackIcon />{id ? "Back to proposal" : "Cancel"}</Link>
+        <Link href={id ? `/proposals/${id}` : "/"} className="back-link"><BackIcon />{id ? t("ed.back") : t("ed.cancel")}</Link>
         <span className="sep">/</span>
-        <span className="heading">{!id ? "New proposal" : L ? `Editing v${n} draft` : "Editing draft"}</span>
+        <span className="heading">{!id ? t("ed.newProposal") : L ? t("ed.editingVersion", { version: vn }) : t("ed.editingDraft")}</span>
         <div className="grow" />
-        {saved ? <span className="saved">Draft saved {saved}</span> : null}
-        <button className="btn-secondary" onClick={onSave} disabled={pending}>Save draft</button>
-        <button className="btn-primary" onClick={onPublish} disabled={pending}>{pending ? "Working…" : L ? `Publish v${n}` : "Publish"}</button>
+        {saved ? <span className="saved">{t("ed.savedAt", { when: saved })}</span> : null}
+        <button className="btn-secondary" onClick={onSave} disabled={pending}>{t("ed.saveDraft")}</button>
+        <button className="btn-primary" onClick={onPublish} disabled={pending}>{pending ? t("ed.working") : L ? t("ed.publishVersion", { version: vn }) : t("ed.publish")}</button>
       </div>
       <div className="edit-cols">
         <div className="edit-paper">
-          <textarea className="edit-title" value={title} onChange={(e) => edit(setTitle)(e.target.value)} placeholder="Proposal title" aria-label="Proposal title" rows={2} />
-          <textarea className="edit-summary" value={summary} onChange={(e) => edit(setSummary)(e.target.value)} placeholder="One or two sentences that sum up the ask" aria-label="Summary" rows={2} />
+          <textarea className="edit-title" value={title} onChange={(e) => edit(setTitle)(e.target.value)} placeholder={t("ed.titlePlaceholder")} aria-label={t("ed.titlePlaceholder")} rows={2} />
+          <textarea className="edit-summary" value={summary} onChange={(e) => edit(setSummary)(e.target.value)} placeholder={t("ed.summaryPlaceholder")} aria-label={t("ed.summary")} rows={2} />
           <div className="edit-rule" />
-          <textarea className="edit-body" value={body} onChange={(e) => edit(setBody)(e.target.value)} placeholder="Write your proposal. Start a line with ## to add a section heading." aria-label="Proposal body" />
+          <textarea className="edit-body" value={body} onChange={(e) => edit(setBody)(e.target.value)} placeholder={t("ed.bodyPlaceholder")} aria-label={t("ed.body")} />
         </div>
         <aside className="edit-aside">
           <div className="card">
             <div className="stack">
-              <span className="eyebrow">Streams &amp; scores</span>
+              <span className="eyebrow">{t("ed.streamsScores")}</span>
               <span className="sub">{scoreHint}</span>
             </div>
             <div className="chips">
@@ -118,23 +120,26 @@ export function Editor(props: EditorProps) {
               ? items.filter((s) => scores[s.id] != null).map((s) => (
                   <div className="slider-row" key={s.id}>
                     <div className="top"><span><span className="dot dot-8" style={{ background: s.color }} />{s.name}</span><b className="tabular">{formatScore(scores[s.id], scale)}{sfx}</b></div>
-                    <input type="range" min={1} max={10} step={1} value={scores[s.id]} aria-label={`${s.name} score`} onChange={(e) => edit(setScores)({ ...scores, [s.id]: Number(e.target.value) })} />
+                    <input type="range" min={1} max={10} step={1} value={scores[s.id]} aria-label={t("ed.scoreFor", { stream: s.name })} onChange={(e) => edit(setScores)({ ...scores, [s.id]: Number(e.target.value) })} />
                   </div>
                 ))
               : null}
           </div>
           <div className="card status-card">
-            <div className="stack"><span className="eyebrow">Status</span><span className="now">{statusText}</span></div>
+            <div className="stack"><span className="eyebrow">{t("ed.status")}</span><span className="now">{statusText}</span></div>
             <label className="label">
-              {L ? `What changed in v${n}?` : "Version note (optional)"}
-              <textarea className="textarea" value={note} onChange={(e) => edit(setNote)(e.target.value)} placeholder={L ? "e.g. Added cost estimate" : "Initial version"} rows={3} />
-              <span className="hint">{L ? `Required. v1–v${L} stay readable in version history.` : "Publishing creates v1 and opens comments."}</span>
+              {L ? t("ed.whatChanged", { version: vn }) : t("ed.versionNote")}
+              <textarea className="textarea" value={note} onChange={(e) => edit(setNote)(e.target.value)} placeholder={L ? t("ed.notePlaceholderChange") : t("ed.notePlaceholderInitial")} rows={3} />
+              <span className="hint">{L ? t("ed.noteRequiredHint", { version: `v${L}` }) : t("ed.noteFirstHint")}</span>
             </label>
+            {props.translateInto.length ? (
+              <div className="tx-hint"><Globe size={14} /><span>{t("ed.txHint", { langs: props.translateInto.join(", ") })}</span></div>
+            ) : null}
             {error ? <div className="error-text" role="alert">{error}</div> : null}
           </div>
           {L ? (
             <div className="card history-card">
-              <span className="eyebrow">Published versions</span>
+              <span className="eyebrow">{t("ed.publishedVersions")}</span>
               {[...props.history].reverse().map((h) => (
                 <div className="history-row" key={h.number}><b>v{h.number}</b><span>{h.note}</span></div>
               ))}

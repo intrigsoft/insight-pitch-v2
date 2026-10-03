@@ -40,6 +40,7 @@ password, for example `priya.raman@insight.gov` (official) or `lena.fischer@exam
 | `npm run db:seed` | Replace all data with the design's sample data |
 | `npm run db:reset` | Migrate, then seed |
 | `npm run jev:rescore` | Score every published proposal's streams with Jev |
+| `npm run i18n:translate` | Fill in missing Sinhala and Tamil interface strings after changing `src/i18n/en.ts` |
 | `npm run comments:analyze` | Run Jev over comments that have no analysis yet and add them to insights |
 | `npm run test:e2e` | Build the app and run all Playwright tests against the test database |
 | `npm run test:visual` | Only the visual comparison against the design screenshots |
@@ -85,3 +86,17 @@ Setup that lives outside the repo:
 - GitHub repository secret `RAILWAY_TOKEN`: a Railway **project token** for the insight-pitch **staging** environment.
 - Deploys never reseed. The staging database was seeded once with the sample data; to reseed, run
   `railway ssh --service app --environment staging -- npx tsx scripts/seed.mts` (this replaces all staging data).
+
+## Languages
+
+Readers switch language from the globe menu in the header (or on the sign-in screen). The choice translates both
+the interface and the content, and is saved to their account.
+
+- **Interface**: `src/i18n/en.ts` is the source. Sinhala (`si.ts`) and Tamil (`ta.ts`) are committed catalogues,
+  machine-translated and open for review. Other languages added in Settings are machine-translated when first used.
+- **Content**: proposals, version notes, stream names, comments and insights are translated by OpenAI from the
+  language they were written in. Translations are cached per paragraph and language in the `translations` table and
+  reused until the text changes. New versions are translated when published.
+- **Admin settings → Languages**: add, enable or remove languages, set the default language, turn translation on
+  publish, discussion translation and machine-translation labels on or off, keep a never-translate list, and clear
+  the cache.

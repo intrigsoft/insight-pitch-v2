@@ -40,7 +40,7 @@ test("admin signs in, sees the account menu and signs out", async ({ page }) => 
   await page.getByRole("button", { name: "Account menu" }).click();
   const menu = page.getByRole("menu");
   await expect(menu).toContainText("Maya Chen");
-  await expect(menu).toContainText("admin");
+  await expect(menu).toContainText("Admin");
   await expect(menu).toContainText(USERS.maya.email);
   await expect(menu.getByRole("menuitem", { name: "Admin settings" })).toBeVisible();
   await menu.getByRole("menuitem", { name: "Sign out" }).click();

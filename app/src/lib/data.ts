@@ -37,7 +37,7 @@ export async function getStreams(): Promise<Stream[]> {
   }));
 }
 
-export type VersionRow = { number: number; title: string; summary: string; body: string; note: string; publishedAt: Date };
+export type VersionRow = { number: number; title: string; summary: string; body: string; note: string; language: string | null; publishedAt: Date };
 export type DraftRow = { title: string; summary: string; body: string; savedAt: Date };
 export type ScoreRow = { streamId: string; score: number; authorScore: number | null; jevScore: number | null; jevConfidence: number | null };
 export type Person = { id: string; name: string; initials: string };
@@ -85,7 +85,7 @@ export async function getVisibleProposals(user: CurrentUser): Promise<ProposalSu
       id: p.id,
       author: { id: p.authorId, name: p.name, initials: p.initials },
       updatedAt: p.updatedAt,
-      latest: latest && { number: latest.number, title: latest.title, summary: latest.summary, body: latest.body, note: latest.note, publishedAt: latest.publishedAt },
+      latest: latest && { number: latest.number, title: latest.title, summary: latest.summary, body: latest.body, note: latest.note, language: latest.language, publishedAt: latest.publishedAt },
       draft: d ? { title: d.title, summary: d.summary, body: d.body, savedAt: d.savedAt } : null,
       scores: scores.filter((s) => s.proposalId === p.id).map(({ streamId, score, authorScore, jevScore, jevConfidence }) => ({ streamId, score, authorScore, jevScore, jevConfidence })),
       commentCount: counts.find((c) => c.proposalId === p.id)?.n ?? 0,
@@ -106,6 +106,7 @@ export type CommentNode = {
   flagReason: string | null;
   kind: string | null;
   relevance: number | null;
+  language: string | null;
   myFlag: string | null;
   replies: CommentNode[];
 };
@@ -151,7 +152,7 @@ export async function getProposalDetail(id: string, user: CurrentUser): Promise<
     db
       .select({
         id: comments.id, parentId: comments.parentId, body: comments.body, createdAt: comments.createdAt, authorId: users.id, name: users.name, initials: users.initials,
-        status: comments.status, flagReason: comments.flagReason, kind: comments.kind, relevance: comments.relevance,
+        status: comments.status, flagReason: comments.flagReason, kind: comments.kind, relevance: comments.relevance, language: comments.language,
       })
       .from(comments)
       .innerJoin(users, eq(users.id, comments.authorId))
@@ -178,6 +179,7 @@ export async function getProposalDetail(id: string, user: CurrentUser): Promise<
     flagReason: c.flagReason,
     kind: c.kind,
     relevance: c.relevance,
+    language: c.language,
     myFlag: myFlags.find((f) => f.commentId === c.id)?.reason ?? null,
     replies: [],
   });
@@ -218,7 +220,7 @@ export async function getProposalDetail(id: string, user: CurrentUser): Promise<
   return {
     id: p.id,
     author: { id: p.authorId, name: p.name, initials: p.initials },
-    versions: versions.map((v) => ({ number: v.number, title: v.title, summary: v.summary, body: v.body, note: v.note, publishedAt: v.publishedAt })),
+    versions: versions.map((v) => ({ number: v.number, title: v.title, summary: v.summary, body: v.body, note: v.note, language: v.language, publishedAt: v.publishedAt })),
     draft: d ? { title: d.title, summary: d.summary, body: d.body, savedAt: d.savedAt } : null,
     scores: scores.map(({ streamId, score, authorScore, jevScore, jevConfidence }) => ({ streamId, score, authorScore, jevScore, jevConfidence })),
     following: followRows.length > 0,

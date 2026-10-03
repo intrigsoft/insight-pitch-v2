@@ -2,24 +2,26 @@
 
 import { useOptimistic, useTransition } from "react";
 import { useToast } from "@/components/Toast";
+import { useI18n } from "@/i18n/client";
 import type { AppSettings } from "@/lib/settings";
 import { updateSetting } from "./actions";
 
 const SCALES = [["5", "1 – 5"], ["10", "0 – 10"], ["100", "0 – 100"]] as const;
 const WHO = [
-  ["author", "Author", "Authors score their own proposal against each stream."],
-  ["reviewers", "Reviewers", "Reviewers set all scores. Authors only pick streams."],
-  ["both", "Author, then reviewers", "Authors suggest scores; reviewers confirm or adjust them."],
+  ["author", "set.whoAuthor", "set.whoAuthorText"],
+  ["reviewers", "set.whoReviewers", "set.whoReviewersText"],
+  ["both", "set.whoBoth", "set.whoBothText"],
 ] as const;
 const TOGGLES = [
-  ["requireStream", "Require at least one stream to publish", "Proposals without a stream can still be saved as drafts."],
-  ["showPublic", "Show scores on the public listing", "When off, the listing shows stream names only. Scores stay visible on each proposal."],
+  ["requireStream", "set.requireStream", "set.requireStreamText"],
+  ["showPublic", "set.showPublic", "set.showPublicText"],
 ] as const;
 
 export function ScoringTab({ settings }: { settings: AppSettings }) {
   const [s, setLocal] = useOptimistic(settings, (cur, patch: Partial<AppSettings>) => ({ ...cur, ...patch }));
   const [, start] = useTransition();
   const toast = useToast();
+  const { t } = useI18n();
   const set = <K extends keyof AppSettings>(key: K, value: AppSettings[K]) =>
     start(async () => {
       setLocal({ [key]: value } as Partial<AppSettings>);
@@ -30,28 +32,28 @@ export function ScoringTab({ settings }: { settings: AppSettings }) {
   return (
     <div className="scoring">
       <div className="scoring-row">
-        <div className="txt narrow"><b>Score scale</b><span>How stream scores are shown everywhere on the site. Changing it converts existing scores.</span></div>
-        <div className="segmented" role="group" aria-label="Score scale">
+        <div className="txt narrow"><b>{t("set.scale")}</b><span>{t("set.scaleText")}</span></div>
+        <div className="segmented" role="group" aria-label={t("set.scale")}>
           {SCALES.map(([k, label]) => (
             <button key={k} aria-pressed={s.scale === k} onClick={() => set("scale", k)}>{label}</button>
           ))}
         </div>
       </div>
       <div className="scoring-row col">
-        <div className="txt"><b>Who assigns scores</b><span>Authors always choose which streams their proposal belongs to.</span></div>
-        <div className="who-grid" role="radiogroup" aria-label="Who assigns scores">
+        <div className="txt"><b>{t("set.whoScores")}</b><span>{t("set.whoScoresText")}</span></div>
+        <div className="who-grid" role="radiogroup" aria-label={t("set.whoScores")}>
           {WHO.map(([k, title, desc]) => (
-            <button key={k} className="who-opt" role="radio" aria-checked={s.scoredBy === k} onClick={() => set("scoredBy", k)}>
+            <button key={k} className="who-opt" role="radio" aria-checked={s.scoredBy === k} data-value={k} onClick={() => set("scoredBy", k)}>
               <span className="ring"><span /></span>
-              <span className="txt"><b>{title}</b><span>{desc}</span></span>
+              <span className="txt"><b>{t(title)}</b><span>{t(desc)}</span></span>
             </button>
           ))}
         </div>
       </div>
       {TOGGLES.map(([k, title, desc]) => (
         <div className="scoring-row toggle-row" key={k}>
-          <div className="txt"><b>{title}</b><span>{desc}</span></div>
-          <button className="toggle" role="switch" aria-checked={s[k]} aria-label={title} onClick={() => set(k, !s[k])}><span /></button>
+          <div className="txt"><b>{t(title)}</b><span>{t(desc)}</span></div>
+          <button className="toggle" role="switch" aria-checked={s[k]} aria-label={t(title)} onClick={() => set(k, !s[k])}><span /></button>
         </div>
       ))}
     </div>

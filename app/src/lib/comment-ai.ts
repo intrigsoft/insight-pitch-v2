@@ -2,6 +2,7 @@ import "server-only";
 import { systemOne, type ChoiceAnswer, type NoulAnswer, type ScoreAnswer } from "./jev";
 import { summarise } from "./openai";
 import { hasRomanisedProfanity } from "./romanised-profanity";
+import { LANGUAGE_CATALOG } from "./languages";
 
 // Jev reads each new comment once, before it posts: conduct, relevance to the proposal, and the kind of point it makes.
 // Insight grouping is a second Jev call; only brand-new insights need OpenAI to write a one-line summary.
@@ -69,6 +70,7 @@ const MATCH_MIN_PROBABILITY = 0.6;
 
 export type ProposalText = { title: string; summary: string; body: string };
 export type CommentCheck = {
+  language: string;
   flag: string | null;
   kind: "question" | "concern" | "suggestion" | "support" | "comment" | "offtopic";
   relevance: number;
@@ -99,6 +101,7 @@ async function askJev(proposal: ProposalText, text: string, replyingTo: string |
       relevance: { type: "score", instructions: replyingTo ? "How closely does the comment relate to the proposal or the comment it replies to?" : "How closely does the comment relate to the proposal?", criteria: RELEVANCE },
       kind: { type: "choice", instructions: "What kind of point does the comment make about the proposal?", criteria: KIND },
       ...(detectEnglish ? { english: { type: "noul" as const, instructions: ENGLISH } } : {}),
+      language: { type: "choice", instructions: LANGUAGE_INSTRUCTIONS, criteria: LANGUAGE_CRITERIA },
     },
   );
   if (!r) return null;
@@ -111,12 +114,33 @@ async function askJev(proposal: ProposalText, text: string, replyingTo: string |
   const relevance = Math.round((rel.score / (RELEVANCE.length - 1)) * 100);
   const offtopic = relevance < OFFTOPIC_BELOW;
   const check: CommentCheck = {
+    language: scriptLanguage(text) ?? (r.answers.language as ChoiceAnswer | undefined)?.choice ?? "en",
     flag: flagKey ? FLAG_LABELS[flagKey] : null,
     kind: offtopic ? "offtopic" : (kind.choice as CommentCheck["kind"]),
     relevance,
     offtopic,
   };
   return { check, english: (r.answers.english as NoulAnswer | undefined)?.noul ?? 1 };
+}
+
+// Which language a text is written in, so translations go from the right language. Romanised Sinhala and Tamil
+// count as Sinhala and Tamil. Text in Sinhala or Tamil script is recognised without asking Jev.
+const LANGUAGE_INSTRUCTIONS = "Which language is the text written in? Sinhala or Tamil written in English letters (Singlish, Tanglish) counts as Sinhala or Tamil.";
+const LANGUAGE_CRITERIA = Object.fromEntries(LANGUAGE_CATALOG.map((l) => [l.code, l.name]));
+
+function scriptLanguage(text: string) {
+  const si = (text.match(/[\u0D80-\u0DFF]/g) ?? []).length;
+  const ta = (text.match(/[\u0B80-\u0BFF]/g) ?? []).length;
+  if (si === 0 && ta === 0) return null;
+  return si >= ta ? "si" : "ta";
+}
+
+/** Language of a proposal version (title, summary and body together). Falls back to `fallback` if Jev is unavailable. */
+export async function detectLanguage(text: string, fallback: string): Promise<string> {
+  const byScript = scriptLanguage(text);
+  if (byScript) return byScript;
+  const r = await systemOne({ text: text.slice(0, 4000) }, { language: { type: "choice", instructions: LANGUAGE_INSTRUCTIONS, criteria: LANGUAGE_CRITERIA } });
+  return (r?.answers.language as ChoiceAnswer | undefined)?.choice ?? fallback;
 }
 
 export type InsightKind = "concern" | "suggestion" | "clarification";

@@ -3,7 +3,8 @@ import bcrypt from "bcryptjs";
 import { drizzle } from "drizzle-orm/postgres-js";
 import postgres from "postgres";
 import * as s from "../src/db/schema";
-import { COMMENT_ANALYSIS, DEFAULT_SETTINGS, INSIGHTS, PEOPLE, PROPOSALS, SEED_PASSWORD, STREAMS, ageToMs } from "../src/db/seed-data";
+import { COMMENT_ANALYSIS, DEFAULT_SETTINGS, INSIGHTS, PEOPLE, PROPOSALS, SEED_LANGUAGES, SEED_PASSWORD, STREAMS, ageToMs } from "../src/db/seed-data";
+import { catalogEntry } from "../src/lib/languages";
 
 const sql = postgres(process.env.DATABASE_URL!, { max: 1, onnotice: () => {} });
 const db = drizzle(sql, { schema: s });
@@ -12,7 +13,12 @@ const ago = (age: string) => new Date(now - ageToMs(age));
 
 await sql`truncate users, sessions, streams, stream_links, proposals, proposal_versions, proposal_drafts,
   proposal_streams, follows, comments, comment_likes, comment_flags, insights, insight_sources, insight_votes,
-  settings restart identity cascade`;
+  settings, languages, translations restart identity cascade`;
+
+await db.insert(s.languages).values(SEED_LANGUAGES.map((code, i) => {
+  const l = catalogEntry(code)!;
+  return { code, name: l.name, native: l.native, rtl: Boolean(l.rtl), enabled: true, position: i };
+}));
 
 const hash = await bcrypt.hash(SEED_PASSWORD, 10);
 const userRows = await db
@@ -42,18 +48,18 @@ for (const p of PROPOSALS) {
   const oldest = p.versions[0]?.age ?? p.draft?.saved ?? p.updated;
   const [row] = await db.insert(s.proposals).values({ authorId: uid[p.author], createdAt: ago(oldest), updatedAt: ago(p.updated) }).returning({ id: s.proposals.id });
   for (const v of p.versions) {
-    await db.insert(s.proposalVersions).values({ proposalId: row.id, number: v.n, title: v.title, summary: v.summary, body: v.body, note: v.note, publishedAt: ago(v.age) });
+    await db.insert(s.proposalVersions).values({ proposalId: row.id, number: v.n, title: v.title, summary: v.summary, body: v.body, note: v.note, publishedAt: ago(v.age), language: "en" });
   }
   if (p.draft) await db.insert(s.proposalDrafts).values({ proposalId: row.id, title: p.draft.title, summary: p.draft.summary, body: p.draft.body, savedAt: ago(p.draft.saved) });
   await db.insert(s.proposalStreams).values(Object.entries(p.scores).map(([streamId, score]) => ({ proposalId: row.id, streamId, score, authorScore: score })));
   if (p.following) await db.insert(s.follows).values({ userId: uid.maya, proposalId: row.id });
   const commentIds: { id: string; text: string }[] = [];
   for (const c of p.comments) {
-    const [cr] = await db.insert(s.comments).values({ proposalId: row.id, authorId: uid[c.author], body: c.text, createdAt: ago(c.age), ...analysis(c.text) }).returning({ id: s.comments.id });
+    const [cr] = await db.insert(s.comments).values({ proposalId: row.id, authorId: uid[c.author], body: c.text, createdAt: ago(c.age), language: "en", ...analysis(c.text) }).returning({ id: s.comments.id });
     commentIds.push({ id: cr.id, text: c.text });
     if (c.likes) await db.insert(s.commentLikes).values(likeRows(cr.id, c.likes));
     for (const [author, text, age, likes] of c.replies) {
-      const [rr] = await db.insert(s.comments).values({ proposalId: row.id, parentId: cr.id, authorId: uid[author], body: text, createdAt: ago(age), ...analysis(text) }).returning({ id: s.comments.id });
+      const [rr] = await db.insert(s.comments).values({ proposalId: row.id, parentId: cr.id, authorId: uid[author], body: text, createdAt: ago(age), language: "en", ...analysis(text) }).returning({ id: s.comments.id });
       commentIds.push({ id: rr.id, text });
       if (likes) await db.insert(s.commentLikes).values(likeRows(rr.id, likes));
     }

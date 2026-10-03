@@ -17,12 +17,13 @@ export type CurrentUser = {
   name: string;
   initials: string;
   role: "admin" | "official" | "citizen";
+  language: string;
 };
 
 export async function verifyLogin(email: string, password: string): Promise<CurrentUser | null> {
   const [u] = await db.select().from(users).where(eq(users.email, email.trim().toLowerCase())).limit(1);
   if (!u || !(await bcrypt.compare(password, u.passwordHash))) return null;
-  return { id: u.id, email: u.email, name: u.name, initials: u.initials, role: u.role };
+  return { id: u.id, email: u.email, name: u.name, initials: u.initials, role: u.role, language: u.language };
 }
 
 export async function startSession(userId: string) {
@@ -45,7 +46,7 @@ export const getCurrentUser = cache(async (): Promise<CurrentUser | null> => {
   const id = (await cookies()).get(SESSION_COOKIE)?.value;
   if (!id) return null;
   const [row] = await db
-    .select({ id: users.id, email: users.email, name: users.name, initials: users.initials, role: users.role })
+    .select({ id: users.id, email: users.email, name: users.name, initials: users.initials, role: users.role, language: users.language })
     .from(sessions)
     .innerJoin(users, eq(users.id, sessions.userId))
     .where(and(eq(sessions.id, id), gt(sessions.expiresAt, new Date())))

@@ -15,7 +15,8 @@
     "jev:rescore": "tsx --conditions=react-server scripts/jev-rescore.mts",
     "test:visual": "playwright test visual",
     "design:refs": "tsx scripts/design-refs.mts",
-    "comments:analyze": "tsx --conditions=react-server scripts/comments-analyze.mts"
+    "comments:analyze": "tsx --conditions=react-server scripts/comments-analyze.mts",
+    "i18n:translate": "tsx --conditions=react-server scripts/i18n-translate.mts"
   },
   "dependencies": {
     "bcryptjs": "^3.0.3",

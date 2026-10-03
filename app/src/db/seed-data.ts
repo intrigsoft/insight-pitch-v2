@@ -194,7 +194,20 @@ export const INSIGHTS: Record<string, [string, string, number, string[], boolean
   p4: [["concern", "Moving coach parking needs consultation with shop owners on the main square", 2, ["Moving coach parking"]]],
 };
 
-export const DEFAULT_SETTINGS = { scale: "10", scoredBy: "both", requireStream: true, showPublic: true } as const;
+export const DEFAULT_SETTINGS = {
+  scale: "10",
+  scoredBy: "both",
+  requireStream: true,
+  showPublic: true,
+  defaultLanguage: "en",
+  txOnPublish: true,
+  txComments: true,
+  txLabel: true,
+  glossary: ["Insight Pitch", "Jev"] as string[],
+};
+
+// Languages switched on in the seed: English (the default) plus Sinhala and Tamil.
+export const SEED_LANGUAGES = ["en", "si", "ta"];
 
 export function ageToMs(age: Age): number {
   const m = /^(\d+)([mhdw])$/.exec(age);

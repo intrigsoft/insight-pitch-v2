@@ -5,7 +5,17 @@ import { DEFAULT_SETTINGS } from "@/db/seed-data";
 import type { Scale } from "./scale";
 
 export type ScoredBy = "author" | "reviewers" | "both";
-export type AppSettings = { scale: Scale; scoredBy: ScoredBy; requireStream: boolean; showPublic: boolean };
+export type AppSettings = {
+  scale: Scale;
+  scoredBy: ScoredBy;
+  requireStream: boolean;
+  showPublic: boolean;
+  defaultLanguage: string;
+  txOnPublish: boolean;
+  txComments: boolean;
+  txLabel: boolean;
+  glossary: string[];
+};
 
 const asBool = (v: unknown, fallback: boolean) => (typeof v === "boolean" ? v : v === "true" ? true : v === "false" ? false : fallback);
 
@@ -19,5 +29,10 @@ export async function getSettings(): Promise<AppSettings> {
     scoredBy: (["author", "reviewers", "both"].includes(scoredBy) ? scoredBy : DEFAULT_SETTINGS.scoredBy) as ScoredBy,
     requireStream: asBool(raw.requireStream, DEFAULT_SETTINGS.requireStream),
     showPublic: asBool(raw.showPublic, DEFAULT_SETTINGS.showPublic),
+    defaultLanguage: typeof raw.defaultLanguage === "string" ? raw.defaultLanguage : DEFAULT_SETTINGS.defaultLanguage,
+    txOnPublish: asBool(raw.txOnPublish, DEFAULT_SETTINGS.txOnPublish),
+    txComments: asBool(raw.txComments, DEFAULT_SETTINGS.txComments),
+    txLabel: asBool(raw.txLabel, DEFAULT_SETTINGS.txLabel),
+    glossary: Array.isArray(raw.glossary) ? (raw.glossary as unknown[]).map(String) : DEFAULT_SETTINGS.glossary,
   };
 }

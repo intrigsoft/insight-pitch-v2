@@ -70,7 +70,7 @@ for (const device of ["desktop", "mobile"] as const) {
       await login(page);
       await openProposal(page, TITLES.legal);
       await page.getByRole("link", { name: "Continue draft" }).click();
-      await expect(page.getByText("Editing v2 draft")).toBeVisible();
+      await expect(page.getByText("Editing v2 draft", { exact: true })).toBeVisible();
       await compare(page, "edit", device);
     });
 

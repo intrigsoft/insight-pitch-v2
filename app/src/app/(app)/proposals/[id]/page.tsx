@@ -6,91 +6,158 @@ import { getSettings } from "@/lib/settings";
 import { savedAgo, shortDate } from "@/lib/format";
 import { formatScore, scaleSuffix } from "@/lib/scale";
 import { sortedScores } from "@/lib/proposal-view";
+import { bodyUnits, contentTranslator } from "@/lib/content-tx";
+import { getI18n, getLanguages } from "@/i18n/server";
 import { BackIcon } from "@/components/icons";
+import { TranslateMissing } from "@/components/TranslateMissing";
 import { Discussion } from "./Discussion";
 import { FollowButton } from "./FollowButton";
-
-function paragraphs(body: string) {
-  return body
-    .split(/\n\s*\n/)
-    .map((t) => t.trim())
-    .filter(Boolean)
-    .map((t) => (t.startsWith("## ") ? { h: true, text: t.slice(3) } : { h: false, text: t }));
-}
+import { ProposalLangMenu } from "./ProposalLangMenu";
+import { TranslationBanner, type BannerProps } from "./TranslationBanner";
 
 export async function generateMetadata({ params }: PageProps<"/proposals/[id]">) {
   const user = await requireUser();
   const p = await getProposalDetail((await params).id, user);
   const c = p && (p.versions.at(-1) ?? p.draft);
-  return { title: c ? `${c.title} · Insight Pitch` : "Proposal · Insight Pitch" };
+  return { title: c ? `${c.title} · Insight Pitch` : "Insight Pitch" };
 }
 
 export default async function ProposalPage({ params, searchParams }: PageProps<"/proposals/[id]">) {
   const { id } = await params;
   const sp = await searchParams;
+  const one = (k: string) => (Array.isArray(sp[k]) ? sp[k][0] : sp[k]);
   const user = await requireUser();
-  const [p, streams, settings] = await Promise.all([getProposalDetail(id, user), getStreams(), getSettings()]);
+  const [p, streams, settings, i18n, allLangs] = await Promise.all([getProposalDetail(id, user), getStreams(), getSettings(), getI18n(), getLanguages()]);
   if (!p) notFound();
+  const { t, tn, lang: readerLang, locale } = i18n;
 
   const latest = p.versions.at(-1) ?? null;
-  const requested = Number(Array.isArray(sp.v) ? sp.v[0] : sp.v);
+  const requested = Number(one("v"));
   const pinned = Number.isInteger(requested) ? p.versions.find((v) => v.number === requested) ?? null : null;
   const shown = pinned ?? latest ?? p.draft!;
   const isOld = Boolean(pinned && latest && pinned.number !== latest.number);
   const mine = p.author.id === user.id;
   const sfx = scaleSuffix(settings.scale);
+
+  // Reading language: the per-proposal choice (?lang=) if it's enabled, else the reader's language.
+  const enabled = allLangs.filter((l) => l.enabled);
+  const srcLang = ("language" in shown && shown.language) || settings.defaultLanguage;
+  const viewLang = enabled.some((l) => l.code === one("lang")) ? one("lang")! : readerLang;
+  const showOriginal = one("original") === "1";
+  const translating = Boolean(latest) && viewLang !== srcLang && !showOriginal;
+
+  const units = bodyUnits(shown.body);
+  const proposalTexts = [shown.title, shown.summary, ...units.map((u) => u.text)].filter(Boolean);
+  const tx = await contentTranslator(viewLang, settings.defaultLanguage, [
+    ...(latest && viewLang !== srcLang ? proposalTexts.map((text) => ({ text, lang: srcLang })) : []),
+    ...(latest ? p.versions.map((v) => ({ text: v.note, lang: v.language })) : []),
+    ...streams.map((s) => ({ text: s.name, lang: settings.defaultLanguage })),
+  ]);
+  const T = (text: string) => (translating ? tx.get(text, srcLang).text : text);
+  const streamName = (s: { name: string }) => tx.get(s.name, settings.defaultLanguage).text;
+
   const scored = sortedScores(p.scores, streams);
-  const unscored = streams.filter((s) => s.active && !p.scores.some((x) => x.streamId === s.id)).map((s) => s.name);
+  const unscored = streams.filter((s) => s.active && !p.scores.some((x) => x.streamId === s.id)).map(streamName);
   const allJev = scored.length > 0 && scored.every((s) => s.jevScore != null) && settings.scoredBy !== "author";
-  const scoreCaption = allJev
-    ? "Extracted from the proposal"
-    : settings.scoredBy === "author" || !latest
-      ? "Suggested by the author"
-      : "Suggested by the author · review pending";
+  const scoreCaption = allJev ? t("view.scoresByJev") : settings.scoredBy === "author" || !latest ? t("view.scoresByAuthor") : t("view.scoresPending");
   const commentCount = p.comments.reduce((n, c) => n + 1 + c.replies.length, 0);
 
   const metaLine = latest
-    ? `Published v${latest.number} · ${shortDate(latest.publishedAt)}` + (p.versions.length > 1 ? ` · first published ${shortDate(p.versions[0].publishedAt)}` : "")
-    : `Draft · saved ${savedAgo(p.draft!.savedAt)}`;
-  const editLabel = p.draft ? "Continue draft" : latest ? "Edit as new version" : "Edit draft";
+    ? t("view.metaPublished", { version: `v${latest.number}`, date: shortDate(latest.publishedAt, locale) }) +
+      (p.versions.length > 1 ? " · " + t("view.metaFirst", { date: shortDate(p.versions[0].publishedAt, locale) }) : "")
+    : t("view.metaDraft", { when: savedAgo(p.draft!.savedAt, i18n) });
+  const editLabel = p.draft ? t("view.continueDraft") : latest ? t("view.editNewVersion") : t("view.editDraft");
   const participants = [p.author.name, ...p.comments.flatMap((c) => [c.author.name, ...c.replies.map((r) => r.author.name)])];
+
+  // Translation banner, worked out here and rendered by a client component that also handles failure and retry.
+  const langName = (code: string) => allLangs.find((l) => l.code === code)?.native ?? code;
+  const query = (patch: Record<string, string | null>) => {
+    const next = new URLSearchParams();
+    const cur: Record<string, string | null> = { v: pinned ? String(pinned.number) : null, lang: one("lang") ?? null, original: showOriginal ? "1" : null };
+    for (const [k, v] of Object.entries({ ...cur, ...patch })) if (v) next.set(k, v);
+    const s = next.toString();
+    return s ? `/proposals/${p.id}?${s}` : `/proposals/${p.id}`;
+  };
+  let banner: BannerProps | null = null;
+  if (latest && viewLang !== srcLang) {
+    const from = langName(srcLang), to = langName(viewLang);
+    const parts = proposalTexts.map((text) => tx.get(text, srcLang));
+    const total = parts.length, done = parts.filter((x) => x.cached).length, ready = done === total;
+    const fresh = parts.filter((x) => x.fresh).length;
+    const reviewed = parts.filter((x) => x.reviewed).length;
+    const canReview = user.role !== "citizen" || mine;
+    banner = showOriginal
+      ? { state: "original", head: t("tx.showingOriginal", { lang: from }), sub: t("tx.showingOriginalSub", { lang: to }), toggleLabel: t("tx.showTranslation", { lang: to }), toggleHref: query({ original: null }) }
+      : ready
+        ? {
+            state: "ready",
+            head: t("tx.translatedBy", { from, to }),
+            sub: (fresh === 0 ? t("tx.fromCache") : t("tx.justNow")) + (reviewed && reviewed < total ? " " + t("tx.notReviewed", { n: total - reviewed }) : ""),
+            chip: settings.txLabel ? (reviewed === total ? t("tx.reviewed") : reviewed ? t("tx.reviewedSome", { n: reviewed, total }) : t("tx.machine")) : undefined,
+            chipReviewed: reviewed === total,
+            toggleLabel: t("tx.showOriginal", { lang: from }),
+            toggleHref: query({ original: "1" }),
+            review: canReview && reviewed < total ? { proposalId: p.id, lang: viewLang, texts: proposalTexts } : undefined,
+          }
+        : {
+            state: "translating",
+            head: t("tx.translatingInto", { lang: to }),
+            sub: done ? t("tx.someCached", { done, total }) : t("tx.firstTime", { lang: to }),
+            failedHead: t("tx.failed", { lang: to }),
+            failedSub: t("tx.failedSub"),
+            missing: { lang: viewLang, texts: tx.missing.filter((m) => proposalTexts.includes(m)) },
+          };
+  }
+  const dim = banner?.state === "translating";
+  // Version notes and stream names are filled in quietly, without the banner.
+  const otherMissing = tx.missing.filter((m) => !proposalTexts.includes(m));
+  const textLang = translating ? viewLang : srcLang;
 
   return (
     <main className="view-main" data-screen-label="Proposal">
-      <Link href="/" className="back-link"><BackIcon />All proposals</Link>
+      {otherMissing.length ? <TranslateMissing lang={viewLang} texts={otherMissing} /> : null}
+      <Link href="/" className="back-link"><BackIcon />{t("view.allProposals")}</Link>
       <div className="view-cols">
         <article className="view-article">
           {isOld && pinned && latest ? (
             <div className="notice-old">
-              <span>You&apos;re viewing <b>v{pinned.number}</b> from {shortDate(pinned.publishedAt)}. {pinned.note}.</span>
-              <Link href={`/proposals/${p.id}`} className="btn-link">View latest (v{latest.number}) →</Link>
+              <span>{t("view.viewingOld", { version: `v${pinned.number}`, date: shortDate(pinned.publishedAt, locale), note: tx.get(pinned.note, pinned.language).text })}</span>
+              <Link href={query({ v: null })} className="btn-link">{t("view.viewLatest", { version: `v${latest.number}` })}</Link>
             </div>
           ) : null}
-          {!latest ? <div className="notice-draft">This proposal is a draft. Only you can see it until it&apos;s published.</div> : null}
-          <h1 className="view-title">{shown.title}</h1>
-          {shown.summary ? <p className="view-summary">{shown.summary}</p> : null}
+          {!latest ? <div className="notice-draft">{t("view.draftNotice")}</div> : null}
+          {banner ? <TranslationBanner {...banner} /> : null}
+          <h1 className={`view-title${dim ? " dim" : ""}`} lang={textLang}>{T(shown.title)}</h1>
+          {shown.summary ? <p className={`view-summary${dim ? " dim" : ""}`} lang={textLang}>{T(shown.summary)}</p> : null}
           <div className="byline">
             <span className="avatar av-38">{p.author.initials}</span>
             <div className="who"><b>{p.author.name}</b><span>{metaLine}</span></div>
+            {latest && enabled.length > 1 ? (
+              <ProposalLangMenu
+                current={viewLang}
+                source={srcLang}
+                options={enabled.map((l) => ({ code: l.code, native: l.native, name: l.name, href: query({ lang: l.code, original: null }) }))}
+              />
+            ) : null}
           </div>
 
-          <section className="card scores-card" aria-label="Stream scores">
-            <div className="head"><span className="eyebrow">Stream scores</span><span className="cap">{scoreCaption}</span></div>
+          <section className="card scores-card" aria-label={t("view.streamScores")}>
+            <div className="head"><span className="eyebrow">{t("view.streamScores")}</span><span className="cap">{scoreCaption}</span></div>
             <div className="score-rows">
               {scored.map((s) => (
                 <div className="score-row" key={s.streamId}>
-                  <span className="name"><span className="dot" style={{ background: s.stream.color }} />{s.stream.name}</span>
+                  <span className="name"><span className="dot" style={{ background: s.stream.color }} />{streamName(s.stream)}</span>
                   <span className="bar"><span style={{ width: `${s.score * 10}%`, background: s.stream.color }} /></span>
                   <span className="val"><b>{formatScore(s.score, settings.scale)}</b><span>{sfx}</span></span>
                 </div>
               ))}
-              {scored.length === 0 ? <div className="cap">No streams picked yet.</div> : null}
-              {unscored.length ? <div className="unscored">Not scored: {unscored.join(", ")}</div> : null}
+              {scored.length === 0 ? <div className="cap">{t("view.noStreams")}</div> : null}
+              {unscored.length ? <div className="unscored">{t("view.notScored", { list: unscored.join(", ") })}</div> : null}
             </div>
           </section>
 
-          <div className="prose">
-            {paragraphs(shown.body).map((pa, i) => (pa.h ? <h3 key={i}>{pa.text}</h3> : <p key={i}>{pa.text}</p>))}
+          <div className={`prose${dim ? " dim" : ""}`} lang={textLang}>
+            {units.map((u, i) => (u.h ? <h3 key={i}>{T(u.text)}</h3> : <p key={i}>{T(u.text)}</p>))}
           </div>
 
           <Discussion
@@ -101,6 +168,14 @@ export default async function ProposalPage({ params, searchParams }: PageProps<"
             commentCount={commentCount}
             me={{ id: user.id, initials: user.initials }}
             participants={[...new Set(participants)]}
+            translation={{
+              enabled: settings.txComments,
+              label: settings.txLabel,
+              viewLang,
+              defaultLang: settings.defaultLanguage,
+              insightsLang: srcLang,
+              languages: enabled.map(({ code, native }) => ({ code, native })),
+            }}
             comments={p.comments.map((c) => ({
               ...c,
               createdAt: c.createdAt.toISOString(),
@@ -112,11 +187,11 @@ export default async function ProposalPage({ params, searchParams }: PageProps<"
         <aside className="view-aside">
           <div className="card">
             <div className="status-head">
-              <span className="eyebrow">Status</span>
-              {latest ? <span className="pill pill-green">Published</span> : <span className="pill pill-amber">Draft</span>}
+              <span className="eyebrow">{t("view.status")}</span>
+              {latest ? <span className="pill pill-green">{t("view.published")}</span> : <span className="pill pill-amber">{t("view.draft")}</span>}
             </div>
             <div className="status-line">
-              {latest ? `${p.versions.length} ${p.versions.length === 1 ? "version" : "versions"} · last published ${shortDate(latest.publishedAt)}` : "Not published yet"}
+              {latest ? `${tn("view.versions", p.versions.length)} · ${t("view.lastPublished", { date: shortDate(latest.publishedAt, locale) })}` : t("view.notPublishedYet")}
             </div>
             {mine ? (
               <Link href={`/proposals/${p.id}/edit`} className="btn-primary btn-block">{editLabel}</Link>
@@ -124,27 +199,27 @@ export default async function ProposalPage({ params, searchParams }: PageProps<"
               <FollowButton proposalId={p.id} following={p.following} />
             )}
           </div>
-          <nav className="card versions-card" aria-label="Version history">
-            <div className="eyebrow">Version history</div>
+          <nav className="card versions-card" aria-label={t("view.versionHistory")}>
+            <div className="eyebrow">{t("view.versionHistory")}</div>
             {mine && p.draft && latest ? (
               <Link href={`/proposals/${p.id}/edit`} className="version-btn pending-draft">
                 <span className="vdot" />
-                <span className="vtext"><span className="vhead">Unpublished draft</span><span className="vnote">Saved {savedAgo(p.draft.savedAt)} · Continue editing</span></span>
+                <span className="vtext"><span className="vhead">{t("view.unpublishedDraft")}</span><span className="vnote">{t("view.savedContinue", { when: savedAgo(p.draft.savedAt, i18n) })}</span></span>
               </Link>
             ) : null}
             {[...p.versions].reverse().map((v) => {
               const isLatest = v === latest;
               return (
-                <Link key={v.number} href={isLatest ? `/proposals/${p.id}` : `/proposals/${p.id}?v=${v.number}`} className="version-btn" aria-current={shown === v ? "true" : undefined} scroll={false}>
+                <Link key={v.number} href={query({ v: isLatest ? null : String(v.number) })} className="version-btn" aria-current={shown === v ? "true" : undefined} scroll={false}>
                   <span className="vdot" />
                   <span className="vtext">
-                    <span className="vhead"><b>v{v.number}</b><span className="vdate">{shortDate(v.publishedAt)}</span>{isLatest ? <span className="latest-tag">Latest</span> : null}</span>
-                    <span className="vnote">{v.note}</span>
+                    <span className="vhead"><b>v{v.number}</b><span className="vdate">{shortDate(v.publishedAt, locale)}</span>{isLatest ? <span className="latest-tag">{t("view.latest")}</span> : null}</span>
+                    <span className="vnote">{tx.get(v.note, v.language).text}</span>
                   </span>
                 </Link>
               );
             })}
-            {!latest ? <div className="muted-note">Nothing published yet. v1 is created when you publish.</div> : null}
+            {!latest ? <div className="muted-note">{t("view.nothingPublished")}</div> : null}
           </nav>
         </aside>
       </div>

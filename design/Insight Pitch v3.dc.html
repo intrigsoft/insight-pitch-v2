@@ -283,7 +283,8 @@
                     <button onClick="{{ c.onLike }}" style="border:none;background:none;padding:0;cursor:pointer;font-weight:600;color:{{ c.likeColor }}">Like</button>
                     <button onClick="{{ c.onReply }}" style="border:none;background:none;padding:0;cursor:pointer;font-weight:600;color:#5d665f">Reply</button>
                     <button onClick="{{ c.onFlag }}" style="border:none;background:none;padding:0;cursor:pointer;font-weight:600;color:{{ c.flagColor }}">{{ c.flagBtn }}</button>
-                    <sc-if value="{{ c.hasLikes }}"><span style="display:flex;align-items:center;gap:4px;margin-left:auto"><svg width="13" height="13" viewBox="0 0 24 24" fill="#2e5e45"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1-1.1a5.5 5.5 0 0 0-7.8 7.8L12 21l8.8-8.6a5.5 5.5 0 0 0 0-7.8z"></path></svg>{{ c.likes }}</span></sc-if>
+                    <span title="{{ c.relTitle }}" style="display:flex;align-items:center;gap:6px;margin-left:auto;color:{{ c.relColor }}"><span style="display:flex;align-items:flex-end;gap:2px;height:12px"><sc-for list="{{ c.bars }}" as="b"><span style="width:3px;height:{{ b.h }};border-radius:1px;background:{{ b.bg }}"></span></sc-for></span>{{ c.relShort }}</span>
+                    <sc-if value="{{ c.hasLikes }}"><span style="display:flex;align-items:center;gap:4px"><svg width="13" height="13" viewBox="0 0 24 24" fill="#2e5e45"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1-1.1a5.5 5.5 0 0 0-7.8 7.8L12 21l8.8-8.6a5.5 5.5 0 0 0 0-7.8z"></path></svg>{{ c.likes }}</span></sc-if>
                   </div>
                   <sc-if value="{{ c.showFlagMenu }}">
                     <div style="display:flex;flex-wrap:wrap;align-items:center;gap:6px;padding-left:14px;font-size:12.5px">
@@ -759,7 +760,7 @@ class Component extends DCLogic {
     clearTimeout(this._hl);this._hl=setTimeout(()=>this.setState({highlight:null}),2600);}
   markAnswered(pid,iid,on){this.upd(pid,p=>({...p,insights:p.insights.map(i=>i.id!==iid?i:{...i,answered:on})}));this.flash(on?'Marked as answered':'Marked as unanswered');}
   vote(pid,iid){this.upd(pid,p=>({...p,insights:p.insights.map(i=>i.id!==iid?i:{...i,voted:!i.voted,votes:i.votes+(i.voted?-1:1)})}));}
-  relView(rel,topic){const lv=rel>=70?3:rel>=35?2:1;const fill=lv===1?'#b07a1f':'#2e5e45';return{bars:[1,2,3].map(i=>({h:(3+i*3)+'px',bg:i<=lv?fill:'#d6d3c9'})),relLabel:(lv===3?'High relevance':lv===2?'Relevant':'Low relevance')+(topic&&lv>1?' · '+topic:''),relTitle:'Jev relevance score: '+rel+'/100'};}
+  relView(rel,topic){const lv=rel>=70?3:rel>=35?2:1;const fill=lv===1?'#b07a1f':'#2e5e45';return{bars:[1,2,3].map(i=>({h:(3+i*3)+'px',bg:i<=lv?fill:'#d6d3c9'})),relLabel:(lv===3?'High relevance':lv===2?'Relevant':'Low relevance')+(topic&&lv>1?' · '+topic:''),relTitle:(lv===3?'High':lv===2?'Medium':'Low')+' relevance to the proposal'+(topic?' · mainly about '+topic:''),relShort:rel+'% relevant',relColor:lv===1?'#7a5410':'#5d665f'};}
   gov(x,pid,cid,rid){const s=this.state;const f=x.jev&&x.jev.flag;const mine=x.author===ME;const rev=!!s.revealed[x.id];const open=!f||mine||rev;
     return{isHidden:!open,isShown:open,hasFlagNote:!!f&&open,flagLabel:f||'',flagNote:f?(mine?'Pending review · only you can see this':'Flagged · '+f+' · under review'):'',bubbleBg:f&&open?'#fbf3f1':'#ecebe4',bubbleBorder:f&&open?'#ebc9c3':'transparent',
       onReveal:()=>this.setState({revealed:{...s.revealed,[x.id]:true}}),
@@ -871,7 +872,7 @@ class Component extends DCLogic {
             composerBorder:ck?(ck.flag?'#d9a9a2':'#e6d3a8'):'#e0ddd4',
             postLabel:s.checking?'Checking…':ck?(ck.flag?'Post for review':'Post anyway'):'Post comment',postBg:t&&!s.checking?'#2e5e45':'#9fb5a7',
             comments:list.map(c=>{const many=c.replies.length>2&&!s.expanded[c.id];const shownR=many?c.replies.slice(-1):c.replies;const hidden=c.replies.length-shownR.length;const g=this.gov(c,p.id,c.id);const open=s.replyTo===c.id;
-          return{...this.av(c.author),...g,id:c.id,bubbleBg:s.highlight===c.id?'#f6ecd6':g.bubbleBg,initials:PEOPLE[c.author].initials,authorName:PEOPLE[c.author].name,text:c.text,time:c.time,likes:c.likes,hasLikes:c.likes>0,likeColor:c.liked?'#2e5e45':'#5d665f',
+          return{...this.av(c.author),...g,...this.relView(c.jev.rel,c.jev.topic),id:c.id,bubbleBg:s.highlight===c.id?'#f6ecd6':g.bubbleBg,initials:PEOPLE[c.author].initials,authorName:PEOPLE[c.author].name,text:c.text,time:c.time,likes:c.likes,hasLikes:c.likes>0,likeColor:c.liked?'#2e5e45':'#5d665f',
             onLike:()=>this.like(p.id,c.id),onReply:()=>this.setState({replyTo:c.id,replyText:'',replyCheck:null}),
             collapsed:hidden>0,replyCountLabel:hidden+' earlier '+(hidden===1?'reply':'replies'),onExpand:()=>this.setState({expanded:{...s.expanded,[c.id]:true}}),
             shownReplies:shownR.map(r=>{const rg=this.gov(r,p.id,c.id,r.id);return{...this.av(r.author),...rg,...this.splitMention(r.text),id:r.id,bubbleBg:s.highlight===r.id?'#f6ecd6':rg.bubbleBg,initials:PEOPLE[r.author].initials,authorName:PEOPLE[r.author].name,time:r.time,likes:r.likes,hasLikes:r.likes>0,likeColor:r.liked?'#2e5e45':'#5d665f',
