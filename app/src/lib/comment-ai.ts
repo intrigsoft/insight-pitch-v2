@@ -21,7 +21,7 @@ const CONDUCT = {
   hostile: "Hostile or aggressive tone aimed at other people, such as telling them to shut up or go away.",
   personal_attack: "Attacks the competence or character of a person instead of discussing the proposal.",
   accusation: "Accuses someone of corruption, bribery or other wrongdoing without evidence.",
-  spam: "Advertising, self-promotion, or links to outside products or services.",
+  spam: "Promotes a product, service, business or website, or tries to get readers to buy something, visit a link or get in touch.",
   shouting: "Written mostly in capital letters.",
 };
 

@@ -88,6 +88,10 @@ Source design: claude.ai/design project "Insight Pitch proposal management"
   English sentences score 0.98+), and `src/lib/romanised-profanity.ts` lists unambiguous Singlish/Tanglish swear
   words (exact forms, so names like Hutton or Kariyawasam don't match) that are flagged outright. Moderators should
   extend that list as they find new words.
+- **Spam vs. off-topic.** Jev confused chatty off-topic questions with spam ("…festival tickets go on sale?" sat at
+  0.49/0.51). Spam is now described by behaviour: promoting something, or getting readers to buy, visit a link or get
+  in touch. On a 10-comment set run twice: 18/20; the miss is "Anyone want to carpool to the stadium?", held as spam
+  where off-topic was expected (still a warning plus moderator review, not silent posting).
 - **The moderator screen isn't in the design.** v3 says "Waiting for moderator review" but has nowhere to review,
   so Admin settings got a Moderation tab in the same style (held, hidden and reader-flagged comments; Approve / Remove).
 - **Insights.** Questions become clarifications; concerns and suggestions keep their kind; support and other
