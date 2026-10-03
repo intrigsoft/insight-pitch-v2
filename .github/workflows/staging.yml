@@ -1,0 +1,98 @@
+# Builds and tests the app on every push to `staging`, then deploys it to the Railway staging environment.
+# Needs one repository secret: RAILWAY_TOKEN, a Railway project token scoped to the insight-pitch "staging" environment.
+name: Staging
+
+on:
+  push:
+    branches: [staging]
+  workflow_dispatch:
+
+# One deploy at a time; a newer push waits for the running one instead of cancelling it mid-deploy.
+concurrency:
+  group: staging
+  cancel-in-progress: false
+
+jobs:
+  test:
+    name: Build and test
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    defaults:
+      run:
+        working-directory: app
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: insight
+          POSTGRES_PASSWORD: insight
+          POSTGRES_DB: insight_pitch_test
+        ports: ["54329:5432"]
+        options: >-
+          --health-cmd "pg_isready -U insight -d insight_pitch_test"
+          --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      DATABASE_URL: postgres://insight:insight@localhost:54329/insight_pitch_test
+      TEST_DATABASE_URL: postgres://insight:insight@localhost:54329/insight_pitch_test
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: app/package-lock.json
+
+      - run: npm ci
+
+      - name: Type check
+        run: npx next typegen && npx tsc --noEmit
+
+      - name: Lint
+        run: npx eslint .
+
+      - name: Install Playwright browser
+        run: npx playwright install --with-deps chromium
+
+      # No Jev or OpenAI keys in CI: specs that need them skip themselves, and comments post without the AI check.
+      # The visual comparison is left out because font rendering differs between machines; run it locally.
+      - name: End-to-end tests
+        run: npx playwright test --grep-invert "matches the design"
+
+      - name: Upload test report
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: app/playwright-report
+          retention-days: 7
+
+  deploy:
+    name: Deploy to Railway staging
+    needs: test
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    environment:
+      name: staging
+      url: https://app-staging-adac.up.railway.app
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Railway CLI
+        run: npm install -g @railway/cli
+
+      # Uploads app/ as the service root. Railway builds it, runs `npm run db:migrate`, then starts it;
+      # --ci streams the build and fails the job if the deployment fails.
+      - name: Deploy
+        env:
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+          # Passed through the environment, never interpolated into the script, so a commit message can't inject commands.
+          COMMIT_MESSAGE: ${{ github.event.head_commit.message }}
+        run: |
+          if [ -z "$RAILWAY_TOKEN" ]; then
+            echo "::error::RAILWAY_TOKEN secret is missing. Create a project token for the insight-pitch staging environment in Railway and add it as a repository secret."
+            exit 1
+          fi
+          summary="${COMMIT_MESSAGE%%$'\n'*}"
+          railway up ./app --path-as-root --service app --environment staging --ci \
+            -m "${GITHUB_SHA::7} ${summary:-manual run}"

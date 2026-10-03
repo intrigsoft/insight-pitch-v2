@@ -65,3 +65,23 @@ closely it relates to the proposal, and whether it's a question, concern, sugges
 Rule problems and off-topic comments get a warning the writer can act on; held comments wait in
 **Admin settings → Moderation**. Questions, concerns and suggestions feed the proposal's **Insights**, where Jev
 groups repeats and OpenAI (`gpt-6-luna`, set `OPENAI_MODEL` to change it) writes a one-line summary for new points.
+
+## Staging deployment (Railway)
+
+Pushing to the `staging` branch runs `.github/workflows/staging.yml`:
+
+1. **Build and test**: type check, lint, and the Playwright suite against a Postgres service container. The run has
+   no Jev or OpenAI keys, so specs that need them skip themselves; the visual comparison only runs locally.
+2. **Deploy**: `railway up` uploads `app/` to the `app` service in the Railway project **insight-pitch**, environment
+   **staging**. Railway builds it, runs `npm run db:migrate` before switching traffic, and health-checks `/login`.
+
+Staging URL: https://app-staging-adac.up.railway.app
+
+Setup that lives outside the repo:
+
+- Railway service settings (build `npm run build`, pre-deploy `npm run db:migrate`, start `npm run start`, health
+  check `/login`) and variables (`DATABASE_URL` → the staging Postgres, `TYPESAFE_API_KEY`, `OPENAI_API_KEY`,
+  `OPENAI_MODEL`, `RAILPACK_NODE_VERSION=22`).
+- GitHub repository secret `RAILWAY_TOKEN`: a Railway **project token** for the insight-pitch **staging** environment.
+- Deploys never reseed. The staging database was seeded once with the sample data; to reseed, run
+  `railway ssh --service app --environment staging -- npx tsx scripts/seed.mts` (this replaces all staging data).
