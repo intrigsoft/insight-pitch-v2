@@ -56,7 +56,7 @@ export function Editor(props: EditorProps) {
     start(async () => {
       const r = await publish(input());
       if (!r.ok) return setError(r.error);
-      toast(`Published v${r.version}` + (r.jev === "unavailable" ? " · Jev scoring unavailable, author scores kept" : ""));
+      toast(`Published v${r.version}` + (r.jev === "unavailable" ? " · automatic scoring unavailable, author scores kept" : ""));
       router.push(`/proposals/${r.id}`);
     });
 
@@ -67,9 +67,9 @@ export function Editor(props: EditorProps) {
       : "Draft · not published";
   const scoreHint = authorScores
     ? scoredBy === "both"
-      ? "Pick the streams this affects and suggest a score. Jev confirms after publishing."
+      ? "Pick the streams this affects and suggest a score. Reviewers confirm after publishing."
       : "Pick the streams this affects and score the impact on each."
-    : "Pick the streams this affects. Jev assigns scores when you publish.";
+    : "Pick the streams this affects. Reviewers assign scores after publishing.";
 
   return (
     <main className="edit-main" data-screen-label="Editor">

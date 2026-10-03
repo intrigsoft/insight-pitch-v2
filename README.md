@@ -55,4 +55,4 @@ question per selected stream (a ten-level rubric) in a single call:
 - **Author, then reviewers** (default): authors suggest a score and Jev's score replaces it on publish.
 
 If Jev is not configured or the call fails, the proposal still publishes with the author's scores and
-the score card says they await Jev review.
+the score card says the review is pending. The interface never names Jev; it calls this step "review".

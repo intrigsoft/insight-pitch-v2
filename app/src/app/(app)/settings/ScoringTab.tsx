@@ -8,8 +8,8 @@ import { updateSetting } from "./actions";
 const SCALES = [["5", "1 – 5"], ["10", "0 – 10"], ["100", "0 – 100"]] as const;
 const WHO = [
   ["author", "Author", "Authors score their own proposal against each stream."],
-  ["reviewers", "Reviewers", "Jev scores every proposal. Authors only pick streams."],
-  ["both", "Author, then reviewers", "Authors suggest scores; Jev confirms or adjusts them."],
+  ["reviewers", "Reviewers", "Reviewers set all scores. Authors only pick streams."],
+  ["both", "Author, then reviewers", "Authors suggest scores; reviewers confirm or adjust them."],
 ] as const;
 const TOGGLES = [
   ["requireStream", "Require at least one stream to publish", "Proposals without a stream can still be saved as drafts."],

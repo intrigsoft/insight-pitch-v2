@@ -43,14 +43,14 @@ Source design: claude.ai/design project "Insight Pitch proposal management"
 - **Jev is the reviewer.** The design captions scores "Extracted from the proposal by Jev". Publishing sends the
   proposal to Jev with one ten-level score question per selected stream; Jev's score replaces the author's
   suggestion (default "Author, then reviewers" mode). In "Author" mode Jev isn't called. If Jev is unavailable the
-  proposal still publishes with author scores and the caption says "awaiting Jev review".
+  proposal still publishes with author scores and the caption says "review pending".
 - **Seed scores are the author's.** The design's sample scores are seeded as author scores, so the seeded
-  proposals read "Suggested by the author · awaiting Jev review". Run `npm run jev:rescore` to have Jev score
+  proposals read "Suggested by the author · review pending" until rescored. Run `npm run jev:rescore` to have Jev score
   them (its numbers land close to the design's, e.g. Healthcare 10 vs 9 for the hospital).
 - **Admin score adjusting is left out.** v2's logic has an "adjust scores" state but no button in the template,
   so it isn't reachable in the design; it isn't built.
-- **Score-scale wording.** "Who assigns scores" option text mentions Jev instead of human reviewers, since Jev
-  does the reviewing here.
+- **Jev isn't named in the interface.** It does the reviewing behind the scenes; users see "Extracted from the
+  proposal", "Reviewers confirm after publishing" and similar neutral wording (changed 3 Oct at your request).
 - **Forgot password and national ID** aren't connected to a backend; both show a short explanation instead of
   failing silently. "Create an account" is a real sign-up (citizen role).
 - **Discussion order.** Threads read oldest first, as in the design's sample. (The design's prototype puts new

@@ -39,7 +39,7 @@ test("new proposal: validation, save draft, then publish v1", async ({ page }) =
   await expect(page.getByText("Published", { exact: true })).toBeVisible();
   const scores = page.getByRole("region", { name: "Stream scores" });
   await expect(scores.locator(".score-row")).toHaveCount(2);
-  if (process.env.TYPESAFE_API_KEY) await expect(scores).toContainText("Extracted from the proposal by Jev");
+  if (process.env.TYPESAFE_API_KEY) await expect(scores).toContainText("Extracted from the proposal");
   await expect(page.getByLabel("Add to the discussion")).toBeVisible();
 
   await page.goto("/");

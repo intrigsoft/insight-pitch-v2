@@ -92,7 +92,7 @@ test("who assigns scores controls the editor sliders, and stream requirement can
   await page.getByRole("switch", { name: "Require at least one stream to publish" }).click();
   await expect(page.getByRole("switch", { name: "Require at least one stream to publish" })).toHaveAttribute("aria-checked", "false");
   await page.goto("/proposals/new");
-  await expect(page.getByText("Pick the streams this affects. Jev assigns scores when you publish.")).toBeVisible();
+  await expect(page.getByText("Pick the streams this affects. Reviewers assign scores after publishing.")).toBeVisible();
   await page.getByRole("button", { name: "Healthcare" }).click();
   await expect(page.getByLabel("Healthcare score")).toHaveCount(0);
 

@@ -43,10 +43,10 @@ export default async function ProposalPage({ params, searchParams }: PageProps<"
   const unscored = streams.filter((s) => s.active && !p.scores.some((x) => x.streamId === s.id)).map((s) => s.name);
   const allJev = scored.length > 0 && scored.every((s) => s.jevScore != null) && settings.scoredBy !== "author";
   const scoreCaption = allJev
-    ? "Extracted from the proposal by Jev"
+    ? "Extracted from the proposal"
     : settings.scoredBy === "author" || !latest
       ? "Suggested by the author"
-      : "Suggested by the author · awaiting Jev review";
+      : "Suggested by the author · review pending";
   const commentCount = p.comments.reduce((n, c) => n + 1 + c.replies.length, 0);
 
   const metaLine = latest
