@@ -78,6 +78,11 @@ Source design: claude.ai/design project "Insight Pitch proposal management"
   relevance under 20/100. Flagged comments the writer still posts are held: only the writer and moderators see
   them. Two different reader flags hide a visible comment behind "Hidden · reason · Show anyway" until a moderator
   approves or removes it; one flag only sends it to the queue. Approving stops reader flags from hiding it again.
+- **Romanised Sinhala and Tamil (Singlish, Tanglish).** Jev caught only 4 of 9 romanised insults as written, but
+  9 of 9 once the text was in Sinhala or Tamil script. The first Jev call also asks whether a Latin-script comment
+  is romanised Sinhala or Tamil; if so, gpt-6-luna converts it to script and Jev checks it again, with the civil line
+  at 0.6 instead of 0.5 (converted civil comments scored 0.79+, insults 0.47 or less). Result on a 24-comment test
+  set: 24/24. Cost: romanised comments take about 3.5 s to check instead of 0.4 s.
 - **The moderator screen isn't in the design.** v3 says "Waiting for moderator review" but has nowhere to review,
   so Admin settings got a Moderation tab in the same style (held, hidden and reader-flagged comments; Approve / Remove).
 - **Insights.** Questions become clarifications; concerns and suggestions keep their kind; support and other

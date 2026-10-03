@@ -1,5 +1,5 @@
 import "server-only";
-import { systemOne, type ChoiceAnswer, type ScoreAnswer } from "./jev";
+import { systemOne, type ChoiceAnswer, type NoulAnswer, type ScoreAnswer } from "./jev";
 import { summarise } from "./openai";
 
 // Jev reads each new comment once, before it posts: conduct, relevance to the proposal, and the kind of point it makes.
@@ -23,6 +23,22 @@ const CONDUCT = {
   spam: "Advertising, self-promotion, or links to outside products or services.",
   shouting: "Written mostly in capital letters.",
 };
+
+const CONDUCT_INSTRUCTIONS = "Does the comment break the discussion rules? Judge only the comment, in whatever language it is written.";
+
+// Jev reads Sinhala and Tamil script well but misses insults in romanised text (Singlish, Tanglish): in testing it
+// caught 4 of 9 romanised insults as written, and 9 of 9 once the text was converted to Sinhala or Tamil script.
+// So the first call also asks whether the comment is romanised, and only those comments get converted (OpenAI)
+// and checked a second time. English and native-script comments stay at one Jev call.
+const ROMANISED = "The comment is written in Sinhala or Tamil using English letters (Singlish or Tanglish), possibly mixed with English words.";
+const ROMANISED_FROM = 0.3;
+// Text already in Sinhala (U+0D80–0DFF) or Tamil (U+0B80–0BFF) script never needs converting.
+const NATIVE_SCRIPT = /[\u0D80-\u0DFF\u0B80-\u0BFF]/;
+// After conversion, civil comments scored 0.79 or higher and insults 0.47 or lower, so the line sits higher there.
+const CIVIL_BELOW_CONVERTED = 0.6;
+const TRANSLITERATE =
+  "If the comment is Sinhala or Tamil written in English letters (Singlish or Tanglish), rewrite it in Sinhala or Tamil script, " +
+  "keeping every word's meaning, including slang and swear words, and leaving English words in English. Otherwise return it unchanged. Return only the text.";
 
 const KIND = {
   question: "Asks a question or requests clarification about the proposal.",
@@ -57,6 +73,17 @@ export type CommentCheck = {
 };
 
 export async function checkComment(proposal: ProposalText, text: string, replyingTo?: string): Promise<CommentCheck | null> {
+  const latinOnly = !NATIVE_SCRIPT.test(text);
+  const first = await askJev(proposal, text, replyingTo, latinOnly, CIVIL_BELOW);
+  if (!first) return null;
+  if (!latinOnly || first.romanised < ROMANISED_FROM) return first.check;
+  const native = await summarise(TRANSLITERATE, text);
+  if (!native || native.trim() === text.trim()) return first.check;
+  const second = await askJev(proposal, native, replyingTo, false, CIVIL_BELOW_CONVERTED);
+  return second?.check ?? first.check;
+}
+
+async function askJev(proposal: ProposalText, text: string, replyingTo: string | undefined, detectRomanised: boolean, civilBelow: number) {
   const r = await systemOne(
     {
       proposal: { title: proposal.title, summary: proposal.summary, text: proposal.body },
@@ -64,9 +91,10 @@ export async function checkComment(proposal: ProposalText, text: string, replyin
       comment: text,
     },
     {
-      conduct: { type: "choice", instructions: "Does the comment break the discussion rules? Judge only the comment, in whatever language it is written.", criteria: CONDUCT },
+      conduct: { type: "choice", instructions: CONDUCT_INSTRUCTIONS, criteria: CONDUCT },
       relevance: { type: "score", instructions: replyingTo ? "How closely does the comment relate to the proposal or the comment it replies to?" : "How closely does the comment relate to the proposal?", criteria: RELEVANCE },
       kind: { type: "choice", instructions: "What kind of point does the comment make about the proposal?", criteria: KIND },
+      ...(detectRomanised ? { romanised: { type: "noul" as const, instructions: ROMANISED } } : {}),
     },
   );
   if (!r) return null;
@@ -75,15 +103,16 @@ export async function checkComment(proposal: ProposalText, text: string, replyin
   const kind = r.answers.kind as ChoiceAnswer;
   const probs = conduct.probabilities;
   const worst = Object.entries(probs).filter(([k]) => k !== "none").sort((a, b) => b[1] - a[1])[0];
-  const flagKey = (probs.none ?? 0) < CIVIL_BELOW && worst ? (worst[0] as keyof typeof FLAG_LABELS) : null;
+  const flagKey = (probs.none ?? 0) < civilBelow && worst ? (worst[0] as keyof typeof FLAG_LABELS) : null;
   const relevance = Math.round((rel.score / (RELEVANCE.length - 1)) * 100);
   const offtopic = relevance < OFFTOPIC_BELOW;
-  return {
+  const check: CommentCheck = {
     flag: flagKey ? FLAG_LABELS[flagKey] : null,
     kind: offtopic ? "offtopic" : (kind.choice as CommentCheck["kind"]),
     relevance,
     offtopic,
   };
+  return { check, romanised: (r.answers.romanised as NoulAnswer | undefined)?.noul ?? 0 };
 }
 
 export type InsightKind = "concern" | "suggestion" | "clarification";

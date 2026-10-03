@@ -138,3 +138,16 @@ test("a moderator can remove a comment", async ({ page }) => {
   await expect(page.getByText("Hidden · Spam")).toHaveCount(0);
   await expect(page.getByRole("tab", { name: /Discussion/ })).toContainText("11");
 });
+
+test("insults written in Sinhala or Tamil with English letters are caught; polite ones post", async ({ page }) => {
+  test.setTimeout(90_000);
+  await login(page);
+  await openProposal(page, TITLES.hospital);
+  // Romanised comments take longer: they're converted to Sinhala or Tamil script and checked again.
+  await composer(page).fill("Palayan yanna ballo, umbala okkoma horu");
+  await page.getByRole("button", { name: "Post comment" }).click();
+  await expect(page.getByText("Edit it, or post it for moderator review.")).toBeVisible({ timeout: 20_000 });
+  await composer(page).fill("Indha hospital nalla idea, aana staff enga irundhu varuvaanga?");
+  await page.getByRole("button", { name: "Post comment" }).click();
+  await expect(page.getByRole("status").filter({ hasText: "Comment posted" })).toBeVisible({ timeout: 20_000 });
+});
