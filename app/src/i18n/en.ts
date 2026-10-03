@@ -190,6 +190,8 @@ export const en = {
   "disc.translatingDiscussion": "Translating discussion…",
   "disc.showOriginalComments": "Show original comments",
   "disc.translated": "Translated",
+  "disc.translatedScore": "Translated · {pct}%",
+  "disc.translatedLow": "Translated · {pct}% · possible error",
   "disc.translateTo": "Translate to",
   "disc.originalLang": "Original ({lang})",
   "reason.Off-topic": "Off-topic",

@@ -123,7 +123,8 @@ test("proposals, stream names and the discussion are translated, with review", a
   await expect(daniel).toContainText("Phasing makes this much easier");
   await page.locator(".disc-tx").click();
   await expect(daniel).not.toContainText("Phasing makes this much easier", { timeout: 60_000 });
-  await expect(daniel.locator(".tx-note").first()).toBeVisible();
+  // Each translated comment shows its AI accuracy check.
+  await expect(daniel.getByTestId("comment-tx-note").first()).toHaveText(/\d+%/);
   await page.locator(".disc-tx").click();
   await expect(daniel).toContainText("Phasing makes this much easier");
 });
@@ -140,6 +141,7 @@ test("a single comment can be translated into another language", async ({ page }
   await ava.getByRole("menuitemradio", { name: "සිංහල" }).click();
   await expect(ava).not.toContainText("The capital estimate looks low", { timeout: 60_000 });
   await expect(ava.locator(".cmt-tx > button").first()).toContainText("සිංහල");
+  await expect(ava.getByTestId("comment-tx-note")).toHaveText(/Translated · \d+%/);
   await ava.locator(".cmt-tx > button").first().click();
   await ava.getByRole("menuitemradio", { name: /Original/ }).click();
   await expect(ava).toContainText("The capital estimate looks low");

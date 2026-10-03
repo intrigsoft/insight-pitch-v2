@@ -128,7 +128,9 @@ Source design: claude.ai/design project "Insight Pitch proposal management"
 - **Showing translation accuracy.** The banner shows "AI accuracy check: 95% · lowest section 92%" (Jev's 0–4 score
   as a percentage, averaged over the proposal's sections), each translated paragraph shows its own score on hover,
   low ones get an amber edge and "Possible translation error", and Settings → Languages shows the average per
-  language. It's labelled as an AI check with an explanation, not presented as measured accuracy.
+  language. Translated comments and replies show it next to the "Translated" label ("Translated · 94%"), with low
+  ones called out as a possible error. It's labelled as an AI check with an explanation, not presented as measured
+  accuracy.
 - **Reviewing translations.** Admins, officials and the proposal's author can mark a proposal's translation as
   reviewed; the reviewer is stored per paragraph.
 - **The moderator screen isn't in the design.** v3 says "Waiting for moderator review" but has nowhere to review,

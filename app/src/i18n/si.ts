@@ -181,6 +181,8 @@ export const si: Partial<Messages> = {
   "disc.translatingDiscussion": "සාකච්ඡාව පරිවර්තනය කරමින්…",
   "disc.showOriginalComments": "මුල් අදහස් පෙන්වන්න",
   "disc.translated": "පරිවර්තනය කර ඇත",
+  "disc.translatedScore": "පරිවර්තනය කළා · {pct}%",
+  "disc.translatedLow": "පරිවර්තනය කළා · {pct}% · විය හැකි දෝෂයක්",
   "disc.translateTo": "පරිවර්තනය කරන්න",
   "disc.originalLang": "මුල් පිටපත ({lang})",
   "reason.Off-topic": "මාතෘකාවෙන් බැහැරයි",

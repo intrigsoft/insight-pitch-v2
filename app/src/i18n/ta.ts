@@ -181,6 +181,8 @@ export const ta: Partial<Messages> = {
   "disc.translatingDiscussion": "விவாதம் மொழிபெயர்க்கப்படுகிறது…",
   "disc.showOriginalComments": "அசல் கருத்துகளைக் காட்டு",
   "disc.translated": "மொழிபெயர்க்கப்பட்டது",
+  "disc.translatedScore": "மொழிபெயர்க்கப்பட்டது · {pct}%",
+  "disc.translatedLow": "மொழிபெயர்க்கப்பட்டது · {pct}% · பிழை இருக்கலாம்",
   "disc.translateTo": "இதற்கு மொழிபெயர்க்கவும்",
   "disc.originalLang": "அசல் ({lang})",
   "reason.Off-topic": "தலைப்புக்குப் புறம்பானது",

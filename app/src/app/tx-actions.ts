@@ -24,12 +24,14 @@ export async function ensureTranslations(lang: string, texts: string[]): Promise
   return { ok: await translateMissing(lang, texts) };
 }
 
-/** Translates texts into `lang` (cached) and returns them, for the discussion where translation happens in place. */
-export async function translateTexts(lang: string, texts: string[]): Promise<{ ok: boolean; result: Record<string, string> }> {
+export type TextTranslation = { text: string; fidelity: number | null };
+
+/** Translates texts into `lang` (cached) and returns them with their AI accuracy check, for the discussion. */
+export async function translateTexts(lang: string, texts: string[]): Promise<{ ok: boolean; result: Record<string, TextTranslation> }> {
   if (!(await checkRequest(lang, texts))) return { ok: false, result: {} };
   const ok = await translateMissing(lang, texts);
   const cached = await cachedTranslations(lang, texts);
-  return { ok, result: Object.fromEntries([...cached].map(([src, c]) => [src, c.text])) };
+  return { ok, result: Object.fromEntries([...cached].map(([src, c]) => [src, { text: c.text, fidelity: c.fidelity }])) };
 }
 
 /** Marks a proposal's translated sections as reviewed. Admins, officials and the proposal's author can do this. */

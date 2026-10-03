@@ -9,7 +9,8 @@ import { HeartIcon } from "@/components/icons";
 import { useI18n } from "@/i18n/client";
 import type { MessageKey } from "@/i18n/en";
 import { shortAgo } from "@/lib/format";
-import { translateTexts } from "@/app/tx-actions";
+import { translateTexts, type TextTranslation } from "@/app/tx-actions";
+import { FIDELITY_MIN } from "@/lib/fidelity";
 import { flagComment, markAnswered, postComment, toggleLike, voteInsight } from "../../actions";
 
 type C = {
@@ -96,7 +97,7 @@ export function Discussion({ proposalId, canComment, isAuthor, commentCount, me,
   const [translateAll, setTranslateAll] = useState(false);
   const [commentLang, setCommentLang] = useState<Record<string, string>>({});
   const [txMenu, setTxMenu] = useState<string | null>(null);
-  const [tx, setTx] = useState<Record<string, Record<string, string>>>({});
+  const [tx, setTx] = useState<Record<string, Record<string, TextTranslation>>>({});
   const [txBusy, setTxBusy] = useState(0);
   const timers = useRef<ReturnType<typeof setTimeout>[]>([]);
   useEffect(() => () => timers.current.forEach(clearTimeout), []);
@@ -157,11 +158,11 @@ export function Discussion({ proposalId, canComment, isAuthor, commentCount, me,
   /** The comment's text in the language it should show in, and whether that's a translation. */
   const shownText = (c: C) => {
     const target = commentLang[c.id] ?? (translateAll ? viewLang : langOf(c));
-    if (target === langOf(c)) return { text: c.body, target, translated: false, busy: false };
+    if (target === langOf(c)) return { text: c.body, target, translated: false, busy: false, fidelity: null as number | null };
     const hit = tx[target]?.[c.body];
-    return { text: hit ?? c.body, target, translated: Boolean(hit && hit !== c.body), busy: !hit };
+    return { text: hit?.text ?? c.body, target, translated: Boolean(hit && hit.text !== c.body), busy: !hit, fidelity: hit?.fidelity ?? null };
   };
-  const insightText = (i: Insight) => (translateAll && translation.insightsLang !== viewLang ? tx[viewLang]?.[i.text] ?? i.text : i.text);
+  const insightText = (i: Insight) => (translateAll && translation.insightsLang !== viewLang ? tx[viewLang]?.[i.text]?.text ?? i.text : i.text);
 
   const showInsights = tab === "insights" && ins.length > 0;
   const hiddenForMe = (c: C) => (c.status === "flagged" && c.author.id !== me.id ? 1 : 0);
@@ -302,7 +303,18 @@ export function Discussion({ proposalId, canComment, isAuthor, commentCount, me,
       <>
         <div className="cmt-actions">
           <span>{shortAgo(new Date(c.createdAt), i18n)}</span>
-          {s.translated && translation.label && !(c.status === "flagged" && !mine && !revealed[c.id]) ? <span className="tx-note">{t("disc.translated")}</span> : null}
+          {s.translated && translation.label && !(c.status === "flagged" && !mine && !revealed[c.id]) ? (
+            // The AI accuracy check for this translation; low scores are called out.
+            <span
+              className={`tx-note${s.fidelity != null && s.fidelity < FIDELITY_MIN ? " low" : ""}`}
+              title={s.fidelity != null ? t("tx.accuracyHelp") : undefined}
+              data-testid="comment-tx-note"
+            >
+              {s.fidelity == null
+                ? t("disc.translated")
+                : t(s.fidelity < FIDELITY_MIN ? "disc.translatedLow" : "disc.translatedScore", { pct: Math.round((s.fidelity / 4) * 100) })}
+            </span>
+          ) : null}
           {interactive ? (
             <>
               <button aria-pressed={c.liked} onClick={() => like(c.id)}>{t("disc.like")}</button>
