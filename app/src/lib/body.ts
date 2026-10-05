@@ -98,6 +98,17 @@ export function safeHref(h: string) {
   return /^(https?:|mailto:)/i.test(h) ? h : "#";
 }
 
+/** Enough body text to write a summary from. */
+export const SUMMARY_MIN_CHARS = 40;
+
+/** The first sentence or two of the first paragraph: a summary when AI isn't available. */
+export function fallbackSummary(title: string, body: string) {
+  const p = parseBody(body).find((b) => b.type === "p" && b.text.trim());
+  const t = p && p.type === "p" ? plainInline(p.text) : title;
+  const s = (t.match(/[^.!?]+[.!?]+/g) || [t]).slice(0, 2).join(" ").trim();
+  return s.length > 240 ? s.slice(0, 237).trim() + "…" : s;
+}
+
 /** Inline markup with the markers removed, for search, AI checks and plain-text previews. */
 export const plainInline = (t: string) => segs(t).map((s) => s.text).join("");
 
@@ -184,7 +195,10 @@ export function changesOf(a: Content, b: Content): Change[] {
 
 /** A cheap fingerprint of the content, to tell whether a saved description still matches it. */
 export function contentSig(c: Content) {
-  const t = c.title.trim() + "|" + c.summary.trim() + "|" + c.body;
+  return hashText(c.title.trim() + "|" + c.summary.trim() + "|" + c.body);
+}
+
+export function hashText(t: string) {
   let h = 5381;
   for (let i = 0; i < t.length; i++) h = ((h << 5) + h + t.charCodeAt(i)) | 0;
   return (h >>> 0).toString(36) + t.length.toString(36);

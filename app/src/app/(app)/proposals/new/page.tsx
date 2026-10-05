@@ -17,7 +17,7 @@ export default async function NewProposalPage() {
   return (
     <Editor
       id={null}
-      initial={{ title: "", summary: "", body: "", note: "", noteAuto: true, noteFor: "" }}
+      initial={{ title: "", summary: "", body: "", note: "", noteAuto: true, noteFor: "", summaryAuto: false, summaryFor: "" }}
       latest={null}
       savedLabel={null}
       history={[]}

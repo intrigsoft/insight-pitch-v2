@@ -28,7 +28,7 @@ export default async function EditProposalPage({ params }: PageProps<"/proposals
       // A fresh editor after each save that changes the route, so the body DOM reloads from the server.
       key={p.id}
       id={p.id}
-      initial={{ title: src.title, summary: src.summary, body: src.body, note: d?.note ?? "", noteAuto: d?.noteAuto ?? true, noteFor: d?.noteFor ?? "" }}
+      initial={{ title: src.title, summary: src.summary, body: src.body, note: d?.note ?? "", noteAuto: d?.noteAuto ?? true, noteFor: d?.noteFor ?? "", summaryAuto: d?.summaryAuto ?? false, summaryFor: d?.summaryFor ?? "" }}
       latest={latest && { number: latest.number, title: latest.title, summary: latest.summary, body: latest.body }}
       savedLabel={d ? savedAgo(d.savedAt, i18n) : null}
       history={p.versions.map((v) => ({ number: v.number, note: v.note, date: shortDate(v.publishedAt, i18n.locale), by: p.author.name }))}

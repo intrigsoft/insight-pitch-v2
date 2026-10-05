@@ -993,3 +993,11 @@ a.lang-item:hover { color: var(--ink); }
 .byline .btn-textonly { margin-left: auto; }
 .byline .btn-textonly + .plang { margin-left: 0; }
 .prose a.body-video, .prose a.body-file { text-decoration: none; color: var(--ink); }
+.sum-wrap { display: flex; flex-direction: column; gap: 8px; }
+.edit-summary.busy { opacity: 0.45; }
+.edit-summary { transition: opacity 0.2s; }
+.sum-help { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; font-family: var(--sans); font-size: 12.5px; color: var(--muted-2); min-height: 26px; }
+.sum-help .stale { color: #7a5410; }
+.sum-help span { text-wrap: pretty; }
+.sum-btn { height: 26px; padding: 0 10px; border: 1px solid var(--line-3); border-radius: 999px; background: #fff; font-weight: 600; font-size: 12px; color: var(--green); cursor: pointer; }
+.sum-btn:hover { background: #f3f7f3; }

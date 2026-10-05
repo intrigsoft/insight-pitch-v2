@@ -61,6 +61,18 @@ const NOTE_INSTRUCTIONS =
   "Describe the substance of what changed, not formatting. Mention new images, tables, videos or files only when they carry content. " +
   "Write it in the language the new version is written in.";
 
+const SUMMARY_INSTRUCTIONS =
+  "You write the summary line for proposals on a public consultation platform where officials and citizens publish government proposals. " +
+  "Write one or two plain sentences, at most 40 words, that state what is proposed and the main reason or benefit. Keep key numbers exactly as written. " +
+  'Neutral, factual register; no hype, no "This proposal". Write in the same language as the proposal.';
+
+/** A one- or two-sentence summary of a proposal, written by AI. Null if it isn't available. */
+export async function aiSummary(title: string, body: string): Promise<string | null> {
+  const out = await summarise(SUMMARY_INSTRUCTIONS, JSON.stringify({ title: title.trim(), body: plainBody(body).slice(0, 6000) }));
+  const t = (out ?? "").trim().replace(/^["“]+|["”]+$/g, "").trim();
+  return t && t.length <= 400 ? t : null;
+}
+
 /** One line describing what changed between two versions, written by AI. Null if it isn't available. */
 export async function aiNote(prev: Content, cur: Content, changes: string[]): Promise<string | null> {
   const input = JSON.stringify({

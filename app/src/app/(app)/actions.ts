@@ -21,8 +21,8 @@ import { requireUser, type CurrentUser } from "@/lib/auth";
 import { getSettings } from "@/lib/settings";
 import type { JevScore } from "@/lib/jev";
 import { getStreams } from "@/lib/data";
-import { bodyTexts, changesOf, contentSig, parseBody, plainBody, VIDEO_RE } from "@/lib/body";
-import { aiNote, detectStreams, ruleNote } from "@/lib/detect";
+import { bodyTexts, changesOf, contentSig, fallbackSummary, parseBody, plainBody, SUMMARY_MIN_CHARS, VIDEO_RE } from "@/lib/body";
+import { aiNote, aiSummary, detectStreams, ruleNote } from "@/lib/detect";
 import { checkComment } from "@/lib/comment-ai";
 import { addToInsights, applyUserFlags, checkCached, latestVersion } from "@/lib/discussion";
 import { detectLanguage } from "@/lib/comment-ai";
@@ -187,6 +187,9 @@ export type EditorInput = {
   /** Whether the description was written automatically, and the content it describes (contentSig). */
   noteAuto: boolean;
   noteFor: string;
+  /** Whether the summary was generated, and from which body (hashText). */
+  summaryAuto: boolean;
+  summaryFor: string;
 };
 
 /** Replaces the proposal's streams with the detected ones. Jev acts as the reviewer, so its score is the score. */
@@ -234,13 +237,20 @@ export async function saveDraft(input: EditorInput): Promise<Result<{ id: string
   } else {
     [{ id }] = await db.insert(proposals).values({ authorId: user.id, createdAt: now, updatedAt: now }).returning({ id: proposals.id });
   }
-  const draft = { title, summary, body: input.body, note: input.note.trim(), noteAuto: input.noteAuto, noteFor: input.noteFor, savedAt: now };
+  const draft = { title, summary, body: input.body, note: input.note.trim(), noteAuto: input.noteAuto, noteFor: input.noteFor, summaryAuto: input.summaryAuto, summaryFor: input.summaryFor, savedAt: now };
   await db.insert(proposalDrafts).values({ proposalId: id!, ...draft }).onConflictDoUpdate({ target: proposalDrafts.proposalId, set: draft });
   // Work out which streams the proposal affects from what it now says.
   const detected = await detectStreams({ title, summary, body: input.body }, await getStreams());
   await writeScores(id!, detected.scores);
   revalidatePath("/", "layout");
   return { ok: true, id: id!, streamsChanged: !sameStreams(before, Object.keys(detected.scores)) };
+}
+
+/** Writes the summary line from the proposal body. */
+export async function writeSummary(input: { title: string; body: string }): Promise<{ summary: string }> {
+  await requireUser();
+  if (plainBody(input.body).trim().length < SUMMARY_MIN_CHARS) return { summary: "" };
+  return { summary: (await aiSummary(input.title, input.body)) ?? fallbackSummary(input.title, input.body) };
 }
 
 export type ChangeSummary = { note: string };

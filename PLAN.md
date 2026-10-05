@@ -77,6 +77,7 @@ Source design: claude.ai/design project "Insight Pitch proposal management"
 - [x] Save draft dialog: detected changes plus an AI-written description, editable; used as the version note
 - [x] Streams and scores detected automatically on every save (no manual picking)
 - [x] Proposal page: formatted text, quotes, lists, tables, images, video and file cards, "Text only" mode, change chips in version history
+- [x] v8: summary helper under the summary field: generate, update when the proposal changes, regenerate; an empty summary is written on save or publish
 - [x] Sample proposals updated to the v7 content (bold, links, lists, tables, image, video, attachments)
 
 ## Decisions
@@ -182,6 +183,7 @@ Source design: claude.ai/design project "Insight Pitch proposal management"
 - **Uploads.** Sent to `/api/uploads` (checked: size, file type, and image magic bytes so a renamed file can't pose as an image; SVG isn't accepted). Readers fetch `/api/uploads/<id>`, which needs a signed-in session and redirects to a 1-hour signed S3 URL, or streams the file locally. Attachments always download rather than open in the browser. Any signed-in user with the link can fetch an upload, including one in a draft; ids are random UUIDs.
 - **Streams are detected, not picked.** On each save, Jev scores the proposal against every active stream and keeps those at 3/10 or above ("some relevance, clearly secondary"). Without Jev, stream names and descriptions are matched as keywords. Publishing reuses the saved detection if the content hasn't changed since. The "who assigns scores" setting now only changes the hint in the editor.
 - **Version descriptions.** Written by gpt-6-luna from the detected changes, in the proposal's language, when the draft is saved; the author can edit or rewrite it. If a description was written automatically for different content, publishing writes a fresh one. Without AI, a description is built from the change list.
+- **Summaries (v8).** Written by gpt-6-luna from the title and body (at most 40 words, in the proposal's language), or the first sentence or two of the body without AI. The draft remembers whether its summary was generated and from which body, so "the proposal has changed since this summary was written" survives a reload. Typing in the summary makes it the author's own.
 - **Text only** is remembered in a cookie, so the server doesn't send images to readers who turned them off.
 
 ## Status summary

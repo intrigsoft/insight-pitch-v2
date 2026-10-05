@@ -7,17 +7,17 @@ import { BackIcon } from "@/components/icons";
 import { Globe } from "@/components/LanguageMenu";
 import { useToast } from "@/components/Toast";
 import { useI18n } from "@/i18n/client";
-import { changesOf, contentSig, fmtSize, MAX_UPLOAD_BYTES, parseBody, type Change } from "@/lib/body";
+import { changesOf, contentSig, fmtSize, hashText, MAX_UPLOAD_BYTES, parseBody, plainBody, SUMMARY_MIN_CHARS, type Change } from "@/lib/body";
 import { changeLabel } from "@/lib/change-label";
 import { formatScore, scaleSuffix, type Scale } from "@/lib/scale";
-import { describeChanges, publish, saveDraft } from "@/app/(app)/actions";
+import { describeChanges, publish, saveDraft, writeSummary } from "@/app/(app)/actions";
 import { bodyToHtml, inlineHtml, islandHtml, serialize, videoHint, type IslandLabels } from "./editor/dom";
 
 type Content = { title: string; summary: string; body: string };
 
 export type EditorProps = {
   id: string | null;
-  initial: Content & { note: string; noteAuto: boolean; noteFor: string };
+  initial: Content & { note: string; noteAuto: boolean; noteFor: string; summaryAuto: boolean; summaryFor: string };
   /** The latest published version, to compare against. */
   latest: (Content & { number: number }) | null;
   savedLabel: string | null;
@@ -74,6 +74,10 @@ export function Editor(props: EditorProps) {
   const [link, setLink] = useState<{ x: number; y: number; url: string; hadLink: boolean } | null>(null);
   const [slash, setSlash] = useState<{ x: number; y: number; q: string; idx: number } | null>(null);
   const [dialog, setDialog] = useState<SaveDialog | null>(null);
+  // The summary can be written from the body; remember whether it was, and for which body, to flag it when it goes stale.
+  const [sumMeta, setSumMeta] = useState({ auto: props.initial.summaryAuto, sig: props.initial.summaryFor, busy: false });
+  const [bodyNow, setBodyNow] = useState(props.initial.body);
+  const summaryJob = useRef<Promise<string> | null>(null);
 
   const edRef = useRef<HTMLDivElement>(null);
   const bodyRef = useRef(props.initial.body);
@@ -107,6 +111,7 @@ export function Editor(props: EditorProps) {
 
   const flush = () => {
     if (edRef.current) bodyRef.current = serialize(edRef.current);
+    setBodyNow(bodyRef.current);
     return bodyRef.current;
   };
   const sync = () => {
@@ -596,10 +601,31 @@ export function Editor(props: EditorProps) {
   /* Saving and publishing */
 
   const content = (): Content => ({ title: title.trim(), summary: summary.trim(), body: flush() });
+  const hasBody = (b: string) => plainBody(b).trim().length >= SUMMARY_MIN_CHARS;
+
+  /** Writes the summary from the body. Resolves to the new summary ("" if there isn't enough to go on). */
+  const genSummary = () => {
+    const body = flush();
+    if (!hasBody(body)) { toast(t("ed.sumMore")); return Promise.resolve(""); }
+    if (summaryJob.current) return summaryJob.current;
+    setSumMeta((m) => ({ ...m, busy: true }));
+    const job = writeSummary({ title, body })
+      .catch(() => ({ summary: "" }))
+      .then((r) => {
+        summaryJob.current = null;
+        if (r.summary) { setSummary(r.summary); setError(""); }
+        setSumMeta({ auto: Boolean(r.summary), sig: hashText(body), busy: false });
+        return r.summary;
+      });
+    summaryJob.current = job;
+    return job;
+  };
 
   const openSave = () => {
     const cur = content();
     if (!cur.title) return setError(t("ed.errTitle"));
+    // An empty summary is written for you when you save.
+    if (!cur.summary && hasBody(cur.body)) genSummary();
     const changes = L ? changesOf(L, cur) : [];
     const sig = contentSig(cur);
     const keep = note.text.trim() && (!note.auto || note.sig === sig);
@@ -620,7 +646,10 @@ export function Editor(props: EditorProps) {
     const next = { text: d.note.trim(), auto: !d.edited, sig: d.sig };
     setNote(next);
     start(async () => {
-      const r = await saveDraft({ id, ...content(), note: next.text, noteAuto: next.auto, noteFor: next.sig });
+      const generated = summaryJob.current ? await summaryJob.current : "";
+      const cur = content();
+      const auto = generated ? { summaryAuto: true, summaryFor: hashText(cur.body) } : { summaryAuto: sumMeta.auto, summaryFor: sumMeta.sig };
+      const r = await saveDraft({ id, ...cur, summary: generated || cur.summary, note: next.text, noteAuto: next.auto, noteFor: next.sig, ...auto });
       if (!r.ok) return setError(r.error);
       setSaved(t("ago.justNow"));
       toast(r.streamsChanged ? t("ed.draftSavedStreams") : t("ed.draftSaved"));
@@ -629,15 +658,16 @@ export function Editor(props: EditorProps) {
     });
   };
 
-  const onPublish = () => {
-    const cur = content();
+  const onPublish = async () => {
+    let cur = content();
+    if (!cur.summary && cur.title && hasBody(cur.body)) cur = { ...cur, summary: await genSummary() };
     const missingAlt = parseBody(cur.body).some((b) => b.type === "image" && !b.alt.trim());
     if (missingAlt) {
       edRef.current?.querySelectorAll<HTMLInputElement>("[data-type=image] [data-f=alt]").forEach((i) => { if (!i.value.trim()) i.classList.add("missing"); });
       return setError(t("ed.errAlt"));
     }
     start(async () => {
-      const r = await publish({ id, ...cur, note: note.text, noteAuto: note.auto, noteFor: note.sig });
+      const r = await publish({ id, ...cur, note: note.text, noteAuto: note.auto, noteFor: note.sig, summaryAuto: sumMeta.auto, summaryFor: sumMeta.sig });
       if (!r.ok) return setError(r.error);
       const version = `v${r.version}`;
       toast(r.translating ? tn("ed.publishedTranslating", r.translating, { version }) : t("ed.publishedToast", { version }));
@@ -645,6 +675,12 @@ export function Editor(props: EditorProps) {
     });
   };
 
+  const sumEmpty = !summary.trim();
+  const sumStale = sumMeta.auto && !sumEmpty && sumMeta.sig !== hashText(bodyNow);
+  const sumBtn = sumEmpty ? t("ed.sumGenerate") : sumStale ? t("ed.sumUpdate") : sumMeta.auto ? t("ed.sumRegenerate") : t("ed.sumGenerate");
+  const sumNote = sumEmpty
+    ? hasBody(bodyNow) ? t("ed.sumEmptyNote") : t("ed.sumWriteFirst")
+    : sumStale ? t("ed.sumStale") : sumMeta.auto ? t("ed.sumAutoNote") : t("ed.sumOwnNote");
   const statusText = !id ? t("ed.statusNew") : L ? t("ed.statusPublished", { version: `v${L.number}` }) + (saved ? " · " + t("ed.statusDraftOf", { version: vn }) : "") : t("ed.statusDraft");
   const md = (fn: () => void) => (e: React.MouseEvent) => { e.preventDefault(); fn(); };
   const on = (x?: boolean) => (x ? " on" : "");
@@ -667,7 +703,26 @@ export function Editor(props: EditorProps) {
       <div className="edit-cols">
         <div className="edit-paper">
           <textarea className="edit-title" value={title} onChange={(e) => { setTitle(e.target.value); setError(""); }} placeholder={t("ed.titlePlaceholder")} aria-label={t("ed.titlePlaceholder")} rows={2} />
-          <textarea className="edit-summary" value={summary} onChange={(e) => { setSummary(e.target.value); setError(""); }} placeholder={t("ed.summaryPlaceholder")} aria-label={t("ed.summary")} rows={2} />
+          <div className="sum-wrap">
+            <textarea
+              className={`edit-summary${sumMeta.busy ? " busy" : ""}`}
+              value={summary}
+              onChange={(e) => { setSummary(e.target.value); setSumMeta((m) => ({ ...m, auto: false })); setError(""); }}
+              placeholder={t("ed.summaryPlaceholder")}
+              aria-label={t("ed.summary")}
+              rows={2}
+            />
+            <div className="sum-help" data-testid="summary-help">
+              {sumMeta.busy ? (
+                <span>{t("ed.sumWriting")}</span>
+              ) : (
+                <>
+                  <span className={sumStale ? "stale" : undefined}>{sumNote}</span>
+                  {hasBody(bodyNow) ? <button type="button" className="sum-btn" onClick={() => genSummary()}>{sumBtn}</button> : null}
+                </>
+              )}
+            </div>
+          </div>
 
           <div role="toolbar" aria-label={t("ed.toolbar")} className="ed-toolbar">
             <select value={S.bt === "h" || S.bt === "quote" ? S.bt : "p"} onChange={(e) => setBlock(e.target.value)} aria-label={t("ed.textStyle")}>

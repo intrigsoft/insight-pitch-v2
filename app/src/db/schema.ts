@@ -108,6 +108,9 @@ export const proposalDrafts = pgTable("proposal_drafts", {
   // Whether the note was written automatically, and for which content (see contentSig), so it can be refreshed.
   noteAuto: boolean("note_auto").notNull().default(true),
   noteFor: text("note_for").notNull().default(""),
+  // Whether the summary was generated from the body, and for which body (hashText), to flag it when the body changes.
+  summaryAuto: boolean("summary_auto").notNull().default(false),
+  summaryFor: text("summary_for").notNull().default(""),
   savedAt: timestamp("saved_at", { withTimezone: true }).notNull().defaultNow(),
 });
 

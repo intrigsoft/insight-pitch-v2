@@ -86,6 +86,39 @@ test("new proposal: validation, save draft with detected streams, then publish v
   await expect(scores).toContainText("Transport");
 });
 
+test("the summary can be written from the proposal, and is written on save if left empty", async ({ page }) => {
+  test.setTimeout(120_000);
+  await page.goto("/proposals/new");
+  const help = page.getByTestId("summary-help");
+  await expect(help).toContainText("Write the proposal first, then generate a summary from it.");
+  await page.getByLabel("Proposal title").fill("Solar panels on public school roofs");
+  await body(page).click();
+  await page.keyboard.type("Install solar panels on the roofs of the 60 largest public schools. The electricity saved would cut school energy bills by about a third and the surplus would be sold to the grid.");
+  await expect(help).toContainText("Leave it empty and one is written for you when you save.");
+
+  await help.getByRole("button", { name: "Generate from proposal" }).click();
+  const summary = page.getByLabel("Summary");
+  await expect(summary).not.toHaveValue("", { timeout: 30_000 });
+  await expect(help).toContainText("Written automatically from the proposal.");
+  await expect(help.getByRole("button", { name: "Regenerate" })).toBeVisible();
+
+  await body(page).click();
+  await page.keyboard.press("Control+End");
+  await page.keyboard.type(" Work would start with schools in the hottest districts.");
+  await expect(help).toContainText("The proposal has changed since this summary was written.");
+  await expect(help.getByRole("button", { name: "Update summary" })).toBeVisible();
+
+  // Typing your own summary makes it yours; clearing it means one is written on save.
+  await summary.fill("My own words.");
+  await expect(help).toContainText("Written by you.");
+  await summary.fill("");
+  await saveDraft(page);
+  await expect(summary).not.toHaveValue("");
+  await page.reload();
+  await expect(page.getByLabel("Summary")).not.toHaveValue("");
+  await expect(page.getByTestId("summary-help")).toContainText("Written automatically from the proposal.");
+});
+
 test("formatting: bold, links, lists, quotes and tables", async ({ page }) => {
   test.setTimeout(120_000);
   await startProposal(page, "Night bus service for shift workers", "Run night buses on the three busiest routes for hospital and factory shift workers.");

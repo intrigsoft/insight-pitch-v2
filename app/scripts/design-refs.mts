@@ -4,7 +4,7 @@ import fs from "node:fs";
 import path from "node:path";
 
 const designDir = path.resolve("../design");
-const src = fs.readFileSync(path.join(designDir, "Insight Pitch v7.dc.html"), "utf8");
+const src = fs.readFileSync(path.join(designDir, "Insight Pitch v8.dc.html"), "utf8");
 const outDir = path.resolve("tests/visual/design");
 const tmpDir = path.resolve(".design-tmp");
 fs.mkdirSync(outDir, { recursive: true });
