@@ -70,6 +70,8 @@ export const si: Partial<Messages> = {
   "prof.strengths": "ශක්තීන්",
   "prof.strengthCaptionMe": "ඔබේ යෝජනාවල ප්‍රවාහ ලකුණු සහ ඔබේ අදහස්වල අදාළත්වය අනුව ගණනය කර ඇත",
   "prof.strengthCaptionOther": "ඔවුන්ගේ යෝජනාවල ප්‍රවාහ ලකුණු සහ ඔවුන්ගේ අදහස්වල අදාළත්වය අනුව ගණනය කර ඇත",
+  "prof.strengthCaptionAiMe": "ඔබ ලියන, අදහස් පළ කරන, අනුගමනය කරන සහ ඉහළ ඡන්දය දෙන දේ අනුව AI විසින් තක්සේරු කර ඇත",
+  "prof.strengthCaptionAiOther": "ඔවුන් ලියන, අදහස් පළ කරන, අනුගමනය කරන සහ ඉහළ ඡන්දය දෙන දේ අනුව AI විසින් තක්සේරු කර ඇත",
   "prof.public": "පොදු",
   "prof.visPublic": "ඔබේ පැතිකඩේ සියලු දෙනාටම පෙනේ",
   "prof.visPrivate": "ඔබේ ශක්තීන් දැකිය හැක්කේ ඔබට පමණි",

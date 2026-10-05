@@ -1,9 +1,10 @@
 import "server-only";
 import { and, eq, inArray, ne, sql } from "drizzle-orm";
 import { db } from "@/db";
-import { commentLikes, comments, userFollows, users } from "@/db/schema";
+import { commentLikes, comments, userFollows, userStrengths, users } from "@/db/schema";
 import type { CurrentUser } from "./auth";
 import { getVisibleProposals, type ProposalSummary } from "./data";
+import { STRENGTH_MIN } from "./strengths";
 
 export type ProfileUser = {
   id: string;
@@ -42,6 +43,8 @@ export type Profile = {
   proposals: ProposalSummary[];
   comments: ProfileComment[];
   strengths: Strength[];
+  /** "jev" when Jev has read the person's activity; "formula" until then, or when Jev is unavailable. */
+  strengthsSource: "jev" | "formula";
   /** Streams of the proposals the person wrote or discussed, with how many such proposals each. */
   streams: { streamId: string; count: number }[];
 };
@@ -53,7 +56,7 @@ export async function getProfile(id: string, viewer: CurrentUser): Promise<Profi
   const isMe = u.id === viewer.id;
   const isModerator = viewer.role === "admin";
 
-  const [visible, rows, follow] = await Promise.all([
+  const [visible, rows, follow, stored] = await Promise.all([
     getVisibleProposals(viewer),
     db
       .select({
@@ -63,6 +66,7 @@ export async function getProfile(id: string, viewer: CurrentUser): Promise<Profi
       .from(comments)
       .where(and(eq(comments.authorId, u.id), ne(comments.status, "removed"))),
     isMe ? Promise.resolve([]) : db.select().from(userFollows).where(and(eq(userFollows.followerId, viewer.id), eq(userFollows.followeeId, u.id))),
+    db.select().from(userStrengths).where(eq(userStrengths.userId, u.id)),
   ]);
 
   const published = new Map(visible.filter((p) => p.latest).map((p) => [p.id, p]));
@@ -114,16 +118,31 @@ export async function getProfile(id: string, viewer: CurrentUser): Promise<Profi
     following: follow.length > 0,
     proposals: own,
     comments: profileComments,
-    strengths: strengthsOf(u.id, [...published.values()], profileComments),
+    ...strengths(u.id, [...published.values()], profileComments, stored),
     streams: [...streamCount.entries()].map(([streamId, count]) => ({ streamId, count })).sort((a, b) => b.count - a.count),
   };
 }
 
-// Strengths per stream, from the stream scores of the proposals the person published and of the proposals they
+// Jev's reading of the person's activity when there is one; the counts behind each stream come from the formula below.
+function strengths(userId: string, published: ProposalSummary[], mine: ProfileComment[], stored: { streamId: string; score: number }[]) {
+  const counted = strengthsOf(userId, published, mine, Infinity);
+  if (!stored.length) return { strengths: counted.slice(0, 5), strengthsSource: "formula" as const };
+  const list = stored
+    .filter((s) => s.score >= STRENGTH_MIN)
+    .sort((a, b) => b.score - a.score)
+    .slice(0, 5)
+    .map((s) => {
+      const c = counted.find((x) => x.streamId === s.streamId);
+      return { streamId: s.streamId, level: Math.min(10, Math.max(1, Math.round(s.score))), raw: s.score, proposals: c?.proposals ?? 0, comments: c?.comments ?? 0 };
+    });
+  return { strengths: list, strengthsSource: "jev" as const };
+}
+
+// Fallback strengths per stream, from the stream scores of the proposals the person published and of the proposals they
 // commented on. A comment counts for less than a proposal, weighted by how relevant it was to the proposal and how
 // many people liked it. Comments held or hidden by moderation don't count. The total maps onto 1–10 with
 // diminishing returns, so a handful of strong contributions already reads high but ten scores need sustained work.
-export function strengthsOf(userId: string, published: ProposalSummary[], mine: ProfileComment[]): Strength[] {
+export function strengthsOf(userId: string, published: ProposalSummary[], mine: ProfileComment[], limit = 5): Strength[] {
   const raw = new Map<string, { raw: number; proposals: number; comments: number }>();
   const add = (streamId: string, v: number, kind: "proposals" | "comments") => {
     const e = raw.get(streamId) ?? { raw: 0, proposals: 0, comments: 0 };
@@ -140,10 +159,10 @@ export function strengthsOf(userId: string, published: ProposalSummary[], mine: 
     }
   }
   return [...raw.entries()]
-    .filter(([, e]) => e.raw >= 1)
+    .filter(([, e]) => limit === Infinity || e.raw >= 1)
     .map(([streamId, e]) => ({ streamId, ...e, level: Math.max(1, Math.round(10 * (1 - Math.exp(-e.raw / 8)))) }))
     .sort((a, b) => b.level - a.level || b.raw - a.raw)
-    .slice(0, 5);
+    .slice(0, limit);
 }
 
 /** Ids of the people a user follows. */

@@ -1,5 +1,6 @@
 "use server";
 
+import { refreshStrengthsSoon } from "@/lib/strengths";
 import { revalidatePath } from "next/cache";
 import { after } from "next/server";
 import { eq, or, sql } from "drizzle-orm";
@@ -105,6 +106,7 @@ export async function approveComment(id: string): Promise<Result> {
   if (!c || c.status === "removed") return { ok: false, error: (await tr())("err.commentGone") };
   await db.update(comments).set({ status: "visible", reviewedBy: admin.id, reviewedAt: new Date() }).where(eq(comments.id, id));
   after(() => addToInsights(id).catch((e) => console.warn("[insights]", e)));
+  after(() => refreshStrengthsSoon(c.authorId));
   revalidatePath("/", "layout");
   return { ok: true };
 }
@@ -117,6 +119,7 @@ export async function removeComment(id: string): Promise<Result> {
   await db.update(comments).set({ status: "removed", reviewedBy: admin.id, reviewedAt: new Date() }).where(eq(comments.id, id));
   await db.delete(insightSources).where(eq(insightSources.commentId, id));
   await db.execute(sql`delete from insights i where i.proposal_id = ${c.proposalId} and not exists (select 1 from insight_sources s where s.insight_id = i.id)`);
+  after(() => refreshStrengthsSoon(c.authorId));
   revalidatePath("/", "layout");
   return { ok: true };
 }

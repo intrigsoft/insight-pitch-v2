@@ -145,7 +145,11 @@ export default async function ProfilePage({ params, searchParams }: PageProps<"/
               <div className="pa-head">
                 <div className="stack">
                   <span className="eyebrow">{t("prof.strengths")}</span>
-                  <span className="cap">{isMe ? t("prof.strengthCaptionMe") : t("prof.strengthCaptionOther")}</span>
+                  <span className="cap">
+                    {profile.strengthsSource === "jev"
+                      ? isMe ? t("prof.strengthCaptionAiMe") : t("prof.strengthCaptionAiOther")
+                      : isMe ? t("prof.strengthCaptionMe") : t("prof.strengthCaptionOther")}
+                  </span>
                 </div>
                 {isMe ? <StrengthsToggle value={u.strengthsPublic} /> : null}
               </div>

@@ -152,6 +152,23 @@ export const userFollows = pgTable(
   (t) => [primaryKey({ columns: [t.followerId, t.followeeId] })],
 );
 
+// Jev's reading of how much a person's activity shows about each stream (0–10), recalculated after they publish or comment.
+export const userStrengths = pgTable(
+  "user_strengths",
+  {
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    streamId: text("stream_id")
+      .notNull()
+      .references(() => streams.id, { onDelete: "cascade" }),
+    score: real("score").notNull(),
+    confidence: real("confidence").notNull(),
+    computedAt: timestamp("computed_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [primaryKey({ columns: [t.userId, t.streamId] })],
+);
+
 export const comments = pgTable(
   "comments",
   {

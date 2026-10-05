@@ -75,6 +75,8 @@ export const en = {
   "prof.strengths": "Strengths",
   "prof.strengthCaptionMe": "Calculated from your proposals’ stream scores and how relevant your comments are",
   "prof.strengthCaptionOther": "Calculated from their proposals’ stream scores and how relevant their comments are",
+  "prof.strengthCaptionAiMe": "Assessed by AI from what you write, comment on, follow and upvote",
+  "prof.strengthCaptionAiOther": "Assessed by AI from what they write, comment on, follow and upvote",
   "prof.public": "Public",
   "prof.visPublic": "Visible to everyone on your profile",
   "prof.visPrivate": "Only you can see your strengths",

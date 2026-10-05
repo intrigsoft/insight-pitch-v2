@@ -67,6 +67,7 @@ Source design: claude.ai/design project "Insight Pitch proposal management"
 - [x] Author names link to profiles (list rows, proposal byline, comments, replies); "Your profile" in the account menu
 - [x] Sample people get the design's profiles (seed and a data migration for existing databases)
 - [x] Tests, and a visual comparison of the profile screen against v5
+- [x] Strengths assessed by Jev from each person's activity, recalculated in the background after they publish, comment, follow or upvote; `npm run strengths:refresh` recalculates everyone
 
 ## Decisions
 
@@ -153,10 +154,16 @@ Source design: claude.ai/design project "Insight Pitch proposal management"
 - **Seeded discussion analysis comes from the design.** The sample comments' kinds, relevance, flags and insights
   are the v3 design's values. `npm run comments:analyze` runs Jev over any comment without an analysis.
 
-- **Strengths formula follows the design.** Per stream: the stream score of each published proposal the person wrote,
-  plus for each visible comment on a proposal (score / 10) × relevance × 3 × (1 + 0.1 × likes, max 10 likes). The sum
-  maps to 1–10 as `10 × (1 − e^(−sum / 8))`; top five streams with a sum of at least 1. Held or hidden comments don't
-  count. The caption says "Calculated from…" rather than naming the scoring engine.
+- **Strengths are assessed by Jev.** Jev reads the person's published proposals (title, summary, the streams they
+  were classified into), their visible comments (with the proposal each is on and its likes), the proposals they follow
+  and the insights they upvoted, and answers one 10-level Score question per active stream ("how much interest and
+  knowledge in this stream does the activity show?"; writing counts most, follows and upvotes least). The
+  probability-weighted level is scaled to 0–10 and stored in `user_strengths`; the profile shows the top five at 1 or
+  above. It is recalculated in the background after the person publishes, comments, follows a proposal or upvotes an
+  insight, and when a moderator approves or removes one of their comments. Until Jev has scored someone (or without
+  a key, as in CI) the profile uses the design's formula: per stream, the stream score of each proposal they wrote plus
+  (score / 10) × relevance × 3 × (1 + 0.1 × likes) per visible comment, mapped to 1–10 by `10 × (1 − e^(−sum / 8))`.
+  The "1 proposal · 3 comments" line under each stream comes from the same counts either way.
 - **Following a person** is stored in `user_follows`. There are no notifications yet, so following shows up as the
   person's published proposals in the Following tab.
 - **Sample roles follow the v5 profiles**: Daniel is a citizen, Tomás and Jun are officials.

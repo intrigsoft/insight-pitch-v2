@@ -122,3 +122,27 @@ test("comment authors link to their profiles", async ({ page }) => {
   await tab(page, "Comments").click();
   await expect(page.getByTestId("profile-comment").filter({ hasText: TITLES.hospital }).first()).toBeVisible();
 });
+
+test("strengths are reassessed by AI after the person comments", async ({ page }) => {
+  test.skip(!process.env.TYPESAFE_API_KEY, "needs TYPESAFE_API_KEY");
+  await login(page, "lena");
+  await page.getByRole("button", { name: "Account menu" }).click();
+  await page.getByRole("menuitem", { name: "Your profile" }).click();
+  const strengths = page.getByTestId("strengths");
+  await expect(strengths).toContainText("Calculated from your proposals");
+  const profileUrl = page.url();
+
+  await openProposal(page, TITLES.bus);
+  await page.getByLabel("Add to the discussion").fill(
+    "Battery buses lose range in hot weather. The pilot should log range on both routes in summer and plan depot charging around it.",
+  );
+  await page.getByRole("button", { name: "Post comment" }).click();
+  await expect(page.getByText("Battery buses lose range in hot weather").first()).toBeVisible({ timeout: 60_000 });
+
+  await page.goto(profileUrl);
+  await expect(async () => {
+    await page.reload();
+    await expect(strengths).toContainText("Assessed by AI", { timeout: 1000 });
+  }).toPass({ timeout: 90_000 });
+  await expect(strengths).toContainText("Transport");
+});

@@ -25,6 +25,7 @@ import { addToInsights, applyUserFlags, checkCached, latestVersion } from "@/lib
 import { detectLanguage } from "@/lib/comment-ai";
 import { bodyUnits } from "@/lib/content-tx";
 import { translateMissing } from "@/lib/translate";
+import { refreshStrengthsSoon } from "@/lib/strengths";
 import { getI18n, getLanguages } from "@/i18n/server";
 
 const tr = async () => (await getI18n()).t;
@@ -51,6 +52,7 @@ export async function toggleFollow(proposalId: string): Promise<Result<{ followi
   const [existing] = await db.select().from(follows).where(where).limit(1);
   if (existing) await db.delete(follows).where(where);
   else await db.insert(follows).values({ userId: user.id, proposalId });
+  after(() => refreshStrengthsSoon(user.id));
   revalidatePath("/", "layout");
   return { ok: true, following: !existing };
 }
@@ -102,7 +104,10 @@ export async function postComment(proposalId: string, body: string, parentId?: s
       language: check?.language ?? null,
     })
     .returning({ id: comments.id });
-  if (status === "visible") after(() => addToInsights(row.id).catch((e) => console.warn("[insights]", e)));
+  if (status === "visible") {
+    after(() => addToInsights(row.id).catch((e) => console.warn("[insights]", e)));
+    after(() => refreshStrengthsSoon(user.id));
+  }
   revalidatePath("/", "layout");
   return { ok: true, status };
 }
@@ -132,6 +137,7 @@ export async function voteInsight(insightId: string): Promise<Result<{ voted: bo
   const [existing] = await db.select().from(insightVotes).where(where).limit(1);
   if (existing) await db.delete(insightVotes).where(where);
   else await db.insert(insightVotes).values({ insightId, userId: user.id });
+  after(() => refreshStrengthsSoon(user.id));
   revalidatePath("/", "layout");
   return { ok: true, voted: !existing };
 }
@@ -299,6 +305,7 @@ export async function publish(input: EditorInput): Promise<Result<{ id: string; 
       for (const lang of targets) await translateMissing(lang, texts);
     });
   }
+  after(() => refreshStrengthsSoon(user.id));
   revalidatePath("/", "layout");
   return { ok: true, id: id!, version: next, jev: jev == null ? "skipped" : jev.ok ? "scored" : "unavailable", translating: targets.length };
 }

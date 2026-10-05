@@ -16,6 +16,7 @@
     "test:visual": "playwright test visual",
     "design:refs": "tsx scripts/design-refs.mts",
     "comments:analyze": "tsx --conditions=react-server scripts/comments-analyze.mts",
+    "strengths:refresh": "tsx --conditions=react-server scripts/strengths.mts",
     "i18n:translate": "tsx --conditions=react-server scripts/i18n-translate.mts"
   },
   "dependencies": {
