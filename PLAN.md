@@ -69,6 +69,16 @@ Source design: claude.ai/design project "Insight Pitch proposal management"
 - [x] Tests, and a visual comparison of the profile screen against v5
 - [x] Strengths assessed by Jev from each person's activity, recalculated in the background after they publish, comment, follow or upvote; `npm run strengths:refresh` recalculates everyone
 
+### v7: rich editor, media and files (added 5 Oct)
+
+- [x] Rich proposal editor: toolbar, floating format menu, links (Ctrl K), "/" insert menu, Markdown shortcuts, tables with row/column tools
+- [x] Images (upload or drop, caption, required alt text), YouTube/Vimeo video links, file attachments (PDF, spreadsheets, documents, up to 20 MB)
+- [x] Uploads stored in S3 (local folder in development and tests); sample files ship with the app
+- [x] Save draft dialog: detected changes plus an AI-written description, editable; used as the version note
+- [x] Streams and scores detected automatically on every save (no manual picking)
+- [x] Proposal page: formatted text, quotes, lists, tables, images, video and file cards, "Text only" mode, change chips in version history
+- [x] Sample proposals updated to the v7 content (bold, links, lists, tables, image, video, attachments)
+
 ## Decisions
 
 - **Jev is the reviewer.** The design captions scores "Extracted from the proposal by Jev". Publishing sends the
@@ -167,6 +177,12 @@ Source design: claude.ai/design project "Insight Pitch proposal management"
 - **Following a person** is stored in `user_follows`. There are no notifications yet, so following shows up as the
   person's published proposals in the Following tab.
 - **Sample roles follow the v5 profiles**: Daniel is a citizen, Tomás and Jun are officials.
+
+- **Body format (v7).** Bodies stay plain text so translation, AI checks and diffs keep working: blocks separated by blank lines, with `**bold**`, `*italic*`, `[links](url)`, `> quotes`, `-`/`1.` lists, `|` tables, and `::image <id> | caption | alt | size`, `::video <url> | title | duration`, `::file <id> | name | size`. Images and files refer to rows in `uploads`; the design used the file name, but ids are stable across renames. The editor turns this into HTML and back (`components/editor/dom.ts`).
+- **Uploads.** Sent to `/api/uploads` (checked: size, file type, and image magic bytes so a renamed file can't pose as an image; SVG isn't accepted). Readers fetch `/api/uploads/<id>`, which needs a signed-in session and redirects to a 1-hour signed S3 URL, or streams the file locally. Attachments always download rather than open in the browser. Any signed-in user with the link can fetch an upload, including one in a draft; ids are random UUIDs.
+- **Streams are detected, not picked.** On each save, Jev scores the proposal against every active stream and keeps those at 3/10 or above ("some relevance, clearly secondary"). Without Jev, stream names and descriptions are matched as keywords. Publishing reuses the saved detection if the content hasn't changed since. The "who assigns scores" setting now only changes the hint in the editor.
+- **Version descriptions.** Written by gpt-6-luna from the detected changes, in the proposal's language, when the draft is saved; the author can edit or rewrite it. If a description was written automatically for different content, publishing writes a fresh one. Without AI, a description is built from the change list.
+- **Text only** is remembered in a cookie, so the server doesn't send images to readers who turned them off.
 
 ## Status summary
 

@@ -2,7 +2,8 @@ import { notFound, redirect } from "next/navigation";
 import { requireUser } from "@/lib/auth";
 import { getProposalDetail, getStreams } from "@/lib/data";
 import { getSettings } from "@/lib/settings";
-import { savedAgo } from "@/lib/format";
+import { savedAgo, shortDate } from "@/lib/format";
+import { sortedScores } from "@/lib/proposal-view";
 import { editorLanguageProps } from "@/lib/editor-props";
 import { getI18n } from "@/i18n/server";
 import { Editor } from "@/components/Editor";
@@ -19,22 +20,20 @@ export default async function EditProposalPage({ params }: PageProps<"/proposals
   if (!p) notFound();
   if (p.author.id !== user.id) redirect(`/proposals/${id}`);
   const latest = p.versions.at(-1) ?? null;
-  const src = p.draft ?? latest!;
+  const d = p.draft;
+  const src = d ?? latest!;
   const lp = await editorLanguageProps(streams, settings, latest?.language ?? null);
   return (
     <Editor
+      // A fresh editor after each save that changes the route, so the body DOM reloads from the server.
+      key={p.id}
       id={p.id}
-      initial={{
-        title: src.title,
-        summary: src.summary,
-        body: src.body,
-        scores: Object.fromEntries(p.scores.map((s) => [s.streamId, s.authorScore ?? s.score])),
-      }}
-      latestVersion={latest?.number ?? null}
-      hasDraft={Boolean(p.draft)}
-      savedLabel={p.draft ? savedAgo(p.draft.savedAt, i18n) : null}
-      history={p.versions.map((v) => ({ number: v.number, note: v.note }))}
-      streams={lp.streams}
+      initial={{ title: src.title, summary: src.summary, body: src.body, note: d?.note ?? "", noteAuto: d?.noteAuto ?? true, noteFor: d?.noteFor ?? "" }}
+      latest={latest && { number: latest.number, title: latest.title, summary: latest.summary, body: latest.body }}
+      savedLabel={d ? savedAgo(d.savedAt, i18n) : null}
+      history={p.versions.map((v) => ({ number: v.number, note: v.note, date: shortDate(v.publishedAt, i18n.locale), by: p.author.name }))}
+      scores={sortedScores(p.scores, lp.streams).map((s) => ({ streamId: s.streamId, name: s.stream.name, color: s.stream.color, score: s.score }))}
+      meName={user.name}
       translateInto={lp.translateInto}
       scale={settings.scale}
       scoredBy={settings.scoredBy}

@@ -94,25 +94,24 @@ test("score scale and public score setting change how scores show", async ({ pag
   await expect(page.locator(".score-row").first()).toHaveText("Healthcare5/5");
 });
 
-test("who assigns scores controls the editor sliders, and stream requirement can be lifted", async ({ page }) => {
+test("who assigns scores changes the editor hint, and stream requirement can be lifted", async ({ page }) => {
+  test.setTimeout(90_000);
   await page.goto("/settings?tab=scoring");
-  await page.getByRole("radio", { name: /Reviewers/ }).click();
-  await saved(page, () => expect(page.getByRole("radio", { name: /Reviewers/ })).toHaveAttribute("aria-checked", "true", { timeout: 2000 }));
+  await page.getByRole("radio", { name: /^Author\s*Authors score/ }).click();
+  await saved(page, () => expect(page.getByRole("radio", { name: /^Author\s*Authors score/ })).toHaveAttribute("aria-checked", "true", { timeout: 2000 }));
   await page.getByRole("switch", { name: "Require at least one stream to publish" }).click();
   await saved(page, () => expect(page.getByRole("switch", { name: "Require at least one stream to publish" })).toHaveAttribute("aria-checked", "false", { timeout: 2000 }));
   await page.goto("/proposals/new");
-  await expect(page.getByText("Pick the streams this affects. Reviewers assign scores after publishing.")).toBeVisible();
-  await page.getByRole("button", { name: "Healthcare" }).click();
-  await expect(page.getByLabel("Healthcare score")).toHaveCount(0);
+  await expect(page.getByTestId("detected-streams")).toContainText("Updated from your proposal each time you save.");
+  await expect(page.getByTestId("detected-streams")).not.toContainText("Reviewers can adjust");
 
-  // Without the stream requirement a proposal can publish with no streams.
-  await page.getByRole("button", { name: "Healthcare" }).click();
+  // Without the stream requirement a proposal can publish straight away, before anything is detected.
   await page.getByLabel("Proposal title").fill("Open data portal for city budgets");
   await page.getByLabel("Summary").fill("Publish the city budget as open data every quarter.");
-  await page.getByLabel("Proposal body").fill("## Proposal\n\nRelease line-item budget data each quarter in a machine-readable format.");
+  await page.getByRole("textbox", { name: "Proposal body" }).click();
+  await page.keyboard.type("Release line-item budget data each quarter in a machine-readable format.");
   await page.getByRole("button", { name: "Publish", exact: true }).click();
-  await expect(page.getByRole("status")).toContainText("Published v1");
-  await expect(page.getByText("No streams picked yet.")).toBeVisible();
+  await expect(page.getByRole("status")).toContainText("Published v1", { timeout: 60_000 });
 });
 
 test("overlap matrix and suggested links", async ({ page }) => {

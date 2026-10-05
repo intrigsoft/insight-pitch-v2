@@ -130,7 +130,7 @@ async function callOpenAI(name: string, native: string, texts: string[], glossar
   const instructions =
     `Translate each string in the JSON array into ${name} (${native}). ${context} ` +
     "Keep every number, percentage and date value exactly as written, but translate the words around them, including currency and unit words (for example 'million', 'rupees', 'km'). Keep @mentions of people unchanged. " +
-    "Keep a leading '## ' marker if present. If a string is already in the target language, return it unchanged. " +
+    "Keep a leading '## ' marker if present. Keep inline markup exactly: **bold**, *italic* and [link text](url), translating only the visible text and never the URL. If a string is already in the target language, return it unchanged. " +
     (glossary.length ? `Never translate these terms: ${glossary.join(", ")}. ` : "") +
     "Return the translations in the same order, one per input string." +
     (fixNote ? ` A previous translation of this text had a problem: ${fixNote} Correct it.` : "");

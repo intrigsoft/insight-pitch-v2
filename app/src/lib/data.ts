@@ -38,7 +38,7 @@ export async function getStreams(): Promise<Stream[]> {
 }
 
 export type VersionRow = { number: number; title: string; summary: string; body: string; note: string; language: string | null; publishedAt: Date };
-export type DraftRow = { title: string; summary: string; body: string; savedAt: Date };
+export type DraftRow = { title: string; summary: string; body: string; savedAt: Date; note: string; noteAuto: boolean; noteFor: string };
 export type ScoreRow = { streamId: string; score: number; authorScore: number | null; jevScore: number | null; jevConfidence: number | null };
 export type Person = { id: string; name: string; initials: string };
 
@@ -86,7 +86,7 @@ export async function getVisibleProposals(user: CurrentUser): Promise<ProposalSu
       author: { id: p.authorId, name: p.name, initials: p.initials },
       updatedAt: p.updatedAt,
       latest: latest && { number: latest.number, title: latest.title, summary: latest.summary, body: latest.body, note: latest.note, language: latest.language, publishedAt: latest.publishedAt },
-      draft: d ? { title: d.title, summary: d.summary, body: d.body, savedAt: d.savedAt } : null,
+      draft: d ? { title: d.title, summary: d.summary, body: d.body, savedAt: d.savedAt, note: d.note, noteAuto: d.noteAuto, noteFor: d.noteFor } : null,
       scores: scores.filter((s) => s.proposalId === p.id).map(({ streamId, score, authorScore, jevScore, jevConfidence }) => ({ streamId, score, authorScore, jevScore, jevConfidence })),
       commentCount: counts.find((c) => c.proposalId === p.id)?.n ?? 0,
       following: follow.some((f) => f.proposalId === p.id),
@@ -221,7 +221,7 @@ export async function getProposalDetail(id: string, user: CurrentUser): Promise<
     id: p.id,
     author: { id: p.authorId, name: p.name, initials: p.initials },
     versions: versions.map((v) => ({ number: v.number, title: v.title, summary: v.summary, body: v.body, note: v.note, language: v.language, publishedAt: v.publishedAt })),
-    draft: d ? { title: d.title, summary: d.summary, body: d.body, savedAt: d.savedAt } : null,
+    draft: d ? { title: d.title, summary: d.summary, body: d.body, savedAt: d.savedAt, note: d.note, noteAuto: d.noteAuto, noteFor: d.noteFor } : null,
     scores: scores.map(({ streamId, score, authorScore, jevScore, jevConfidence }) => ({ streamId, score, authorScore, jevScore, jevConfidence })),
     following: followRows.length > 0,
     comments: top,

@@ -11,18 +11,18 @@ export async function generateMetadata() {
 }
 
 export default async function NewProposalPage() {
-  await requireUser();
+  const user = await requireUser();
   const [streams, settings] = await Promise.all([getStreams(), getSettings()]);
   const lp = await editorLanguageProps(streams, settings, null);
   return (
     <Editor
       id={null}
-      initial={{ title: "", summary: "", body: "", scores: {} }}
-      latestVersion={null}
-      hasDraft={false}
+      initial={{ title: "", summary: "", body: "", note: "", noteAuto: true, noteFor: "" }}
+      latest={null}
       savedLabel={null}
       history={[]}
-      streams={lp.streams}
+      scores={[]}
+      meName={user.name}
       translateInto={lp.translateInto}
       scale={settings.scale}
       scoredBy={settings.scoredBy}

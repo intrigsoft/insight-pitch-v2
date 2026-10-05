@@ -1,4 +1,5 @@
 import "server-only";
+import { plainBody } from "./body";
 import { systemOne, type ChoiceAnswer, type NoulAnswer, type ScoreAnswer } from "./jev";
 import { summarise } from "./openai";
 import { hasRomanisedProfanity } from "./romanised-profanity";
@@ -92,7 +93,7 @@ export async function checkComment(proposal: ProposalText, text: string, replyin
 async function askJev(proposal: ProposalText, text: string, replyingTo: string | undefined, detectEnglish: boolean, civilBelow: number) {
   const r = await systemOne(
     {
-      proposal: { title: proposal.title, summary: proposal.summary, text: proposal.body },
+      proposal: { title: proposal.title, summary: proposal.summary, text: plainBody(proposal.body) },
       ...(replyingTo ? { replying_to: replyingTo } : {}),
       comment: text,
     },

@@ -1,9 +1,10 @@
 import "dotenv/config";
+import { statSync } from "node:fs";
 import bcrypt from "bcryptjs";
 import { drizzle } from "drizzle-orm/postgres-js";
 import postgres from "postgres";
 import * as s from "../src/db/schema";
-import { COMMENT_ANALYSIS, DEFAULT_SETTINGS, INSIGHTS, PEOPLE, PROPOSALS, SEED_LANGUAGES, SEED_PASSWORD, STREAMS, ageToMs } from "../src/db/seed-data";
+import { COMMENT_ANALYSIS, DEFAULT_SETTINGS, UPLOADS, INSIGHTS, PEOPLE, PROPOSALS, SEED_LANGUAGES, SEED_PASSWORD, STREAMS, ageToMs } from "../src/db/seed-data";
 import { catalogEntry } from "../src/lib/languages";
 
 const sql = postgres(process.env.DATABASE_URL!, { max: 1, onnotice: () => {} });
@@ -11,7 +12,7 @@ const db = drizzle(sql, { schema: s });
 const now = Date.now();
 const ago = (age: string) => new Date(now - ageToMs(age));
 
-await sql`truncate users, sessions, user_follows, streams, stream_links, proposals, proposal_versions, proposal_drafts,
+await sql`truncate users, sessions, user_follows, streams, stream_links, proposals, proposal_versions, proposal_drafts, uploads,
   proposal_streams, follows, comments, comment_likes, comment_flags, insights, insight_sources, insight_votes,
   settings, languages, translations restart identity cascade`;
 
@@ -19,6 +20,10 @@ await db.insert(s.languages).values(SEED_LANGUAGES.map((code, i) => {
   const l = catalogEntry(code)!;
   return { code, name: l.name, native: l.native, rtl: Boolean(l.rtl), enabled: true, position: i };
 }));
+
+await db.insert(s.uploads).values(
+  UPLOADS.map((u) => ({ id: u.id, kind: u.kind, name: u.name, contentType: u.contentType, size: statSync(`seed-assets/${u.file}`).size, key: `bundled/${u.file}` })),
+);
 
 const hash = await bcrypt.hash(SEED_PASSWORD, 10);
 const userRows = await db

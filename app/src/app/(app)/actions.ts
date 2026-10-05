@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { after } from "next/server";
-import { and, eq, inArray, max } from "drizzle-orm";
+import { and, desc, eq, inArray, max } from "drizzle-orm";
 import { db } from "@/db";
 import {
   commentFlags,
@@ -18,12 +18,14 @@ import {
   streams,
 } from "@/db/schema";
 import { requireUser, type CurrentUser } from "@/lib/auth";
-import { getSettings, type AppSettings } from "@/lib/settings";
-import { scoreWithJev } from "@/lib/jev";
+import { getSettings } from "@/lib/settings";
+import type { JevScore } from "@/lib/jev";
+import { getStreams } from "@/lib/data";
+import { bodyTexts, changesOf, contentSig, parseBody, plainBody, VIDEO_RE } from "@/lib/body";
+import { aiNote, detectStreams, ruleNote } from "@/lib/detect";
 import { checkComment } from "@/lib/comment-ai";
 import { addToInsights, applyUserFlags, checkCached, latestVersion } from "@/lib/discussion";
 import { detectLanguage } from "@/lib/comment-ai";
-import { bodyUnits } from "@/lib/content-tx";
 import { translateMissing } from "@/lib/translate";
 import { refreshStrengthsSoon } from "@/lib/strengths";
 import { getI18n, getLanguages } from "@/i18n/server";
@@ -180,111 +182,121 @@ export type EditorInput = {
   title: string;
   summary: string;
   body: string;
+  /** Description of what changed, from the save dialog. */
   note: string;
-  scores: Record<string, number>; // streamId -> suggested score (1–10)
+  /** Whether the description was written automatically, and the content it describes (contentSig). */
+  noteAuto: boolean;
+  noteFor: string;
 };
 
-function cleanScores(scores: Record<string, number>) {
-  const out: Record<string, number> = {};
-  for (const [k, v] of Object.entries(scores ?? {})) {
-    const n = Math.round(Number(v));
-    if (k && Number.isFinite(n)) out[k] = Math.min(10, Math.max(1, n));
-  }
-  return out;
-}
-
-/** New streams must be active; streams already on the proposal may stay even if since deactivated. */
-async function validateStreams(ids: string[], keep: string[]) {
-  if (!ids.length) return null;
-  const rows = await db.select({ id: streams.id, active: streams.active }).from(streams).where(inArray(streams.id, ids));
-  for (const id of ids) {
-    const r = rows.find((x) => x.id === id);
-    if (!r || (!r.active && !keep.includes(id))) return (await tr())("ed.errStreamGone");
-  }
-  return null;
-}
-
-async function currentStreamIds(proposalId: string) {
-  return (await db.select({ id: proposalStreams.streamId }).from(proposalStreams).where(eq(proposalStreams.proposalId, proposalId))).map((r) => r.id);
-}
-
-async function writeScores(proposalId: string, scores: Record<string, number>, settings: AppSettings, jev?: Record<string, { score: number; raw: number; confidence: number }>) {
-  const existing = await db.select().from(proposalStreams).where(eq(proposalStreams.proposalId, proposalId));
+/** Replaces the proposal's streams with the detected ones. Jev acts as the reviewer, so its score is the score. */
+async function writeScores(proposalId: string, detected: Record<string, JevScore>) {
   await db.delete(proposalStreams).where(eq(proposalStreams.proposalId, proposalId));
-  const rows = Object.entries(scores).map(([streamId, suggested]) => {
-    const prev = existing.find((e) => e.streamId === streamId);
-    const j = jev?.[streamId];
-    const jevScore = j ? j.raw : prev?.jevScore ?? null;
-    const jevConfidence = j ? j.confidence : prev?.jevConfidence ?? null;
-    const authorScore = settings.scoredBy === "reviewers" ? null : suggested;
-    // Jev acts as the reviewer: its score wins unless authors score their own proposals.
-    const reviewed = jevScore != null ? Math.min(10, Math.max(1, Math.round(jevScore))) : null;
-    const score = settings.scoredBy === "author" ? suggested : reviewed ?? authorScore ?? 5;
-    return { proposalId, streamId, score, authorScore, jevScore, jevConfidence };
-  });
+  const rows = Object.entries(detected).map(([streamId, j]) => ({
+    proposalId,
+    streamId,
+    score: Math.min(10, Math.max(1, Math.round(j.raw))),
+    authorScore: null,
+    jevScore: j.confidence ? j.raw : null,
+    jevConfidence: j.confidence || null,
+  }));
   if (rows.length) await db.insert(proposalStreams).values(rows);
 }
 
-export async function saveDraft(input: EditorInput): Promise<Result<{ id: string }>> {
-  const user = await requireUser();
-  const title = input.title.trim();
-  if (!title) return { ok: false, error: (await tr())("ed.errTitle") };
-  const scores = cleanScores(input.scores);
-  const settings = await getSettings();
-  const now = new Date();
-
-  let id = input.id;
-  if (id) {
-    if (!(await loadOwnProposal(id, user))) return { ok: false, error: (await tr())("ed.errOwn") };
-    const err = await validateStreams(Object.keys(scores), await currentStreamIds(id));
-    if (err) return { ok: false, error: err };
-    await db.update(proposals).set({ updatedAt: now }).where(eq(proposals.id, id));
-  } else {
-    const err = await validateStreams(Object.keys(scores), []);
-    if (err) return { ok: false, error: err };
-    [{ id }] = await db.insert(proposals).values({ authorId: user.id, createdAt: now, updatedAt: now }).returning({ id: proposals.id });
-  }
-  await db
-    .insert(proposalDrafts)
-    .values({ proposalId: id!, title, summary: input.summary.trim(), body: input.body, savedAt: now })
-    .onConflictDoUpdate({ target: proposalDrafts.proposalId, set: { title, summary: input.summary.trim(), body: input.body, savedAt: now } });
-  await writeScores(id!, scores, settings);
-  revalidatePath("/", "layout");
-  return { ok: true, id: id! };
+async function currentScores(proposalId: string) {
+  return db.select({ streamId: proposalStreams.streamId, score: proposalStreams.score }).from(proposalStreams).where(eq(proposalStreams.proposalId, proposalId));
 }
 
-export async function publish(input: EditorInput): Promise<Result<{ id: string; version: number; jev: "scored" | "unavailable" | "skipped"; translating: number }>> {
+async function latestContent(proposalId: string) {
+  const [v] = await db
+    .select({ number: proposalVersions.number, title: proposalVersions.title, summary: proposalVersions.summary, body: proposalVersions.body })
+    .from(proposalVersions)
+    .where(eq(proposalVersions.proposalId, proposalId))
+    .orderBy(desc(proposalVersions.number))
+    .limit(1);
+  return v ?? null;
+}
+
+const sameStreams = (a: string[], b: string[]) => [...a].sort().join() === [...b].sort().join();
+
+export async function saveDraft(input: EditorInput): Promise<Result<{ id: string; streamsChanged: boolean }>> {
   const user = await requireUser();
   const title = input.title.trim();
   const summary = input.summary.trim();
+  if (!title) return { ok: false, error: (await tr())("ed.errTitle") };
+  const now = new Date();
+
+  let id = input.id;
+  const before = id ? (await currentScores(id)).map((s) => s.streamId) : [];
+  if (id) {
+    if (!(await loadOwnProposal(id, user))) return { ok: false, error: (await tr())("ed.errOwn") };
+    await db.update(proposals).set({ updatedAt: now }).where(eq(proposals.id, id));
+  } else {
+    [{ id }] = await db.insert(proposals).values({ authorId: user.id, createdAt: now, updatedAt: now }).returning({ id: proposals.id });
+  }
+  const draft = { title, summary, body: input.body, note: input.note.trim(), noteAuto: input.noteAuto, noteFor: input.noteFor, savedAt: now };
+  await db.insert(proposalDrafts).values({ proposalId: id!, ...draft }).onConflictDoUpdate({ target: proposalDrafts.proposalId, set: draft });
+  // Work out which streams the proposal affects from what it now says.
+  const detected = await detectStreams({ title, summary, body: input.body }, await getStreams());
+  await writeScores(id!, detected.scores);
+  revalidatePath("/", "layout");
+  return { ok: true, id: id!, streamsChanged: !sameStreams(before, Object.keys(detected.scores)) };
+}
+
+export type ChangeSummary = { note: string };
+
+/** Writes a one-line description of what changed since the last published version. */
+export async function describeChanges(input: Pick<EditorInput, "id" | "title" | "summary" | "body">): Promise<ChangeSummary> {
+  const user = await requireUser();
+  const { t, tn } = await getI18n();
+  if (!input.id || !(await loadOwnProposal(input.id, user))) return { note: "" };
+  const prev = await latestContent(input.id);
+  if (!prev) return { note: "" };
+  const cur = { title: input.title.trim(), summary: input.summary.trim(), body: input.body };
+  const changes = changesOf(prev, cur);
+  if (!changes.length) return { note: "" };
+  const note = (await aiNote(prev, cur, changes.map((c) => ruleNote([c], t, tn)))) ?? ruleNote(changes, t, tn);
+  return { note };
+}
+
+export async function publish(input: EditorInput): Promise<Result<{ id: string; version: number; translating: number }>> {
+  const user = await requireUser();
+  const { t, tn } = await getI18n();
+  const title = input.title.trim();
+  const summary = input.summary.trim();
   const body = input.body.trim();
-  const note = input.note.trim();
-  if (!title || !summary || !body) return { ok: false, error: (await tr())("ed.errRequired") };
+  if (!title || !summary || !body) return { ok: false, error: t("ed.errRequired") };
+  const blocks = parseBody(body);
+  if (blocks.some((b) => b.type === "image" && !b.alt.trim())) return { ok: false, error: t("ed.errAlt") };
+  if (blocks.some((b) => b.type === "video" && !VIDEO_RE.test(b.url.trim()))) return { ok: false, error: t("ed.errVideo") };
   const settings = await getSettings();
-  const scores = cleanScores(input.scores);
-  if (settings.requireStream && Object.keys(scores).length === 0) return { ok: false, error: (await tr())("ed.errStream") };
 
   let id = input.id;
   let next = 1;
+  let prev: { number: number; title: string; summary: string; body: string } | null = null;
   if (id) {
-    if (!(await loadOwnProposal(id, user))) return { ok: false, error: (await tr())("ed.errOwn") };
-    const [r] = await db.select({ n: max(proposalVersions.number) }).from(proposalVersions).where(eq(proposalVersions.proposalId, id));
-    next = (r?.n ?? 0) + 1;
-    if (next > 1 && !note) return { ok: false, error: (await tr())("ed.errNote") };
+    if (!(await loadOwnProposal(id, user))) return { ok: false, error: t("ed.errOwn") };
+    prev = await latestContent(id);
+    next = (prev?.number ?? 0) + 1;
   }
-  const err = await validateStreams(Object.keys(scores), id ? await currentStreamIds(id) : []);
-  if (err) return { ok: false, error: err };
+  const cur = { title, summary, body };
+  const changes = prev ? changesOf(prev, cur) : [];
+  if (prev && !changes.length) return { ok: false, error: t("ed.errNothingChanged", { version: `v${prev.number}` }) };
 
-  // Score before writing so a slow or failing Jev call never leaves a half-published proposal.
-  const streamRows = Object.keys(scores).length
-    ? await db.select({ id: streams.id, name: streams.name, description: streams.description }).from(streams).where(inArray(streams.id, Object.keys(scores)))
-    : [];
-  const [jev, language] = await Promise.all([
-    settings.scoredBy === "author" || !streamRows.length ? null : scoreWithJev({ title, summary, body }, streamRows),
-    detectLanguage(`${title}\n${summary}\n${body}`, settings.defaultLanguage),
-  ]);
-  if (jev && !jev.ok) console.warn("[jev] scoring unavailable:", jev.reason);
+  // Streams: reuse the ones detected when this exact content was saved, otherwise detect them now.
+  const [draft] = id ? await db.select().from(proposalDrafts).where(eq(proposalDrafts.proposalId, id)).limit(1) : [];
+  const saved = draft && draft.title === title && draft.summary === summary && draft.body.trim() === body ? await currentScores(id!) : null;
+  const detected = saved?.length ? null : await detectStreams(cur, await getStreams());
+  const streamCount = saved?.length || Object.keys(detected?.scores ?? {}).length;
+  if (settings.requireStream && !streamCount) return { ok: false, error: t("ed.errStream") };
 
+  // The description from the save dialog, unless it was written automatically for different content.
+  let note = input.note.trim();
+  if (prev && note && input.noteAuto && input.noteFor !== contentSig(cur)) note = "";
+  if (prev && !note) note = (await aiNote(prev, cur, changes.map((c) => ruleNote([c], t, tn)))) ?? ruleNote(changes, t, tn);
+  if (!note) note = t("ed.initialVersion");
+
+  const language = await detectLanguage(`${title}\n${summary}\n${plainBody(body)}`, settings.defaultLanguage);
   const now = new Date();
   await db.transaction(async (tx) => {
     if (!id) {
@@ -292,20 +304,20 @@ export async function publish(input: EditorInput): Promise<Result<{ id: string; 
     } else {
       await tx.update(proposals).set({ updatedAt: now }).where(eq(proposals.id, id));
     }
-    await tx.insert(proposalVersions).values({ proposalId: id!, number: next, title, summary, body, note: note || (await tr())("ed.initialVersion"), language, publishedAt: now });
+    await tx.insert(proposalVersions).values({ proposalId: id!, number: next, title, summary, body, note, language, publishedAt: now });
     await tx.delete(proposalDrafts).where(eq(proposalDrafts.proposalId, id!));
   });
-  await writeScores(id!, scores, settings, jev?.ok ? jev.scores : undefined);
+  if (detected) await writeScores(id!, detected.scores);
   // Translate the new version into every other enabled language after responding, so readers rarely wait.
   // Unchanged paragraphs are already cached from earlier versions and cost nothing.
   const targets = settings.txOnPublish ? (await getLanguages()).filter((l) => l.enabled && l.code !== language).map((l) => l.code) : [];
   if (targets.length) {
-    const texts = [title, summary, note, ...bodyUnits(body).map((u) => u.text)].filter(Boolean);
+    const texts = [title, summary, note, ...bodyTexts(body)].filter(Boolean);
     after(async () => {
       for (const lang of targets) await translateMissing(lang, texts);
     });
   }
   after(() => refreshStrengthsSoon(user.id));
   revalidatePath("/", "layout");
-  return { ok: true, id: id!, version: next, jev: jev == null ? "skipped" : jev.ok ? "scored" : "unavailable", translating: targets.length };
+  return { ok: true, id: id!, version: next, translating: targets.length };
 }

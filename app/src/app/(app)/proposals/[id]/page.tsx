@@ -6,7 +6,12 @@ import { getSettings } from "@/lib/settings";
 import { savedAgo, shortDate } from "@/lib/format";
 import { formatScore, scaleSuffix } from "@/lib/scale";
 import { sortedScores } from "@/lib/proposal-view";
-import { bodyUnits, contentTranslator } from "@/lib/content-tx";
+import { contentTranslator } from "@/lib/content-tx";
+import { bodyTexts, changesOf, parseBody, TEXT_ONLY_COOKIE } from "@/lib/body";
+import { changeLabel } from "@/lib/change-label";
+import { cookies } from "next/headers";
+import { ProposalBody } from "@/components/ProposalBody";
+import { TextOnlyButton, TextOnlyProvider } from "./Media";
 import { FIDELITY_MIN } from "@/lib/fidelity";
 import { getI18n, getLanguages } from "@/i18n/server";
 import { BackIcon } from "@/components/icons";
@@ -47,8 +52,9 @@ export default async function ProposalPage({ params, searchParams }: PageProps<"
   const showOriginal = one("original") === "1";
   const translating = Boolean(latest) && viewLang !== srcLang && !showOriginal;
 
-  const units = bodyUnits(shown.body);
-  const proposalTexts = [shown.title, shown.summary, ...units.map((u) => u.text)].filter(Boolean);
+  const proposalTexts = [shown.title, shown.summary, ...bodyTexts(shown.body)].filter(Boolean);
+  const hasImages = parseBody(shown.body).some((b) => b.type === "image");
+  const textOnly = (await cookies()).get(TEXT_ONLY_COOKIE)?.value === "1";
   const tx = await contentTranslator(viewLang, settings.defaultLanguage, [
     ...(latest && viewLang !== srcLang ? proposalTexts.map((text) => ({ text, lang: srcLang })) : []),
     ...(latest ? p.versions.map((v) => ({ text: v.note, lang: v.language })) : []),
@@ -59,8 +65,7 @@ export default async function ProposalPage({ params, searchParams }: PageProps<"
 
   const scored = sortedScores(p.scores, streams);
   const unscored = streams.filter((s) => s.active && !p.scores.some((x) => x.streamId === s.id)).map(streamName);
-  const allJev = scored.length > 0 && scored.every((s) => s.jevScore != null) && settings.scoredBy !== "author";
-  const scoreCaption = allJev ? t("view.scoresByJev") : settings.scoredBy === "author" || !latest ? t("view.scoresByAuthor") : t("view.scoresPending");
+  const scoreCaption = t("view.scoresDetected");
   const commentCount = p.comments.reduce((n, c) => n + 1 + c.replies.length, 0);
 
   const metaLine = latest
@@ -130,8 +135,13 @@ export default async function ProposalPage({ params, searchParams }: PageProps<"
   // Version notes and stream names are filled in quietly, without the banner.
   const otherMissing = tx.missing.filter((m) => !proposalTexts.includes(m));
   const textLang = translating ? viewLang : srcLang;
+  const changes = (v: (typeof p.versions)[number]) => {
+    const i = p.versions.indexOf(v);
+    return i > 0 ? changesOf(p.versions[i - 1], v) : [];
+  };
 
   return (
+    <TextOnlyProvider initial={textOnly}>
     <main className="view-main" data-screen-label="Proposal">
       {otherMissing.length ? <TranslateMissing lang={viewLang} texts={otherMissing} /> : null}
       <Link href="/" className="back-link"><BackIcon />{t("view.allProposals")}</Link>
@@ -150,6 +160,7 @@ export default async function ProposalPage({ params, searchParams }: PageProps<"
           <div className="byline">
             <span className="avatar av-38">{p.author.initials}</span>
             <div className="who"><b><Link href={`/people/${p.author.id}`} className="name-link">{p.author.name}</Link></b><span>{metaLine}</span></div>
+            {hasImages ? <TextOnlyButton /> : null}
             {latest && enabled.length > 1 ? (
               <ProposalLangMenu
                 current={viewLang}
@@ -175,19 +186,20 @@ export default async function ProposalPage({ params, searchParams }: PageProps<"
           </section>
 
           <div className={`prose${dim ? " dim" : ""}`} lang={textLang}>
-            {units.map((u, i) => {
-              // Each translated section shows its AI accuracy check on hover; low ones are marked.
-              const f = translating ? tx.get(u.text, srcLang).fidelity : null;
-              const low = f != null && f < FIDELITY_MIN;
-              const title = f != null ? t("tx.sectionAccuracy", { pct: Math.round((f / 4) * 100) }) : undefined;
-              if (u.h) return <h3 key={i} title={title}>{T(u.text)}</h3>;
-              return (
-                <p key={i} title={title} className={low ? "tx-low" : undefined}>
-                  {low ? <span className="tx-low-note">{t("tx.lowSection")}</span> : null}
-                  {T(u.text)}
-                </p>
-              );
-            })}
+            <ProposalBody
+              body={shown.body}
+              T={T}
+              accuracy={(text) => {
+                // Each translated section shows its AI accuracy check on hover; low ones are marked.
+                const f = translating ? tx.get(text, srcLang).fidelity : null;
+                return { title: f != null ? t("tx.sectionAccuracy", { pct: Math.round((f / 4) * 100) }) : undefined, low: f != null && f < FIDELITY_MIN, lowNote: t("tx.lowSection") };
+              }}
+              fileMeta={(fid, size) => {
+                const first = p.versions.find((v) => v.body.includes(`::file ${fid} `));
+                return [size, first ? t("view.addedIn", { version: `v${first.number}` }) : t("view.inDraft")].filter(Boolean).join(" · ");
+              }}
+              labels={{ video: t("view.video") }}
+            />
           </div>
 
           <Discussion
@@ -245,6 +257,7 @@ export default async function ProposalPage({ params, searchParams }: PageProps<"
                   <span className="vtext">
                     <span className="vhead"><b>v{v.number}</b><span className="vdate">{shortDate(v.publishedAt, locale)}</span>{isLatest ? <span className="latest-tag">{t("view.latest")}</span> : null}</span>
                     <span className="vnote">{tx.get(v.note, v.language).text}</span>
+                    {changes(v).length ? <span className="vchips">{changes(v).map((c, i) => <span key={i}>{changeLabel(c, t, tn)}</span>)}</span> : null}
                   </span>
                 </Link>
               );
@@ -254,5 +267,6 @@ export default async function ProposalPage({ params, searchParams }: PageProps<"
         </aside>
       </div>
     </main>
+    </TextOnlyProvider>
   );
 }

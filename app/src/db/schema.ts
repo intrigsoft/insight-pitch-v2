@@ -103,7 +103,24 @@ export const proposalDrafts = pgTable("proposal_drafts", {
   title: text("title").notNull(),
   summary: text("summary").notNull().default(""),
   body: text("body").notNull().default(""),
+  // Description of what changed since the last published version, used as the version note on publishing.
+  note: text("note").notNull().default(""),
+  // Whether the note was written automatically, and for which content (see contentSig), so it can be refreshed.
+  noteAuto: boolean("note_auto").notNull().default(true),
+  noteFor: text("note_for").notNull().default(""),
   savedAt: timestamp("saved_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+// Images and attachments in proposal bodies. Bodies refer to them by id; the bytes live in object storage under `key`.
+export const uploads = pgTable("uploads", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  ownerId: uuid("owner_id").references(() => users.id, { onDelete: "set null" }),
+  kind: text("kind", { enum: ["image", "file"] }).notNull(),
+  name: text("name").notNull(),
+  contentType: text("content_type").notNull(),
+  size: integer("size").notNull(),
+  key: text("key").notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 
 // Scores are stored on a 1–10 base scale and converted for display by the scale setting.

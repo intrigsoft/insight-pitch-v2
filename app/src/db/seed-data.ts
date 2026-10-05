@@ -32,11 +32,26 @@ export const STREAMS = [
   { id: "agri", name: "Agriculture", desc: "Farming, food security and rural livelihoods.", color: "#8a5a2b", active: false, related: [] },
 ];
 
-const P1a = "## The problem\n\nAbout 340,000 people in the northern region live more than 70 km from a full-service hospital. Emergency patients travel an average of 95 minutes, and the two existing clinics refer most cases out of the district.";
-const P1cost = "## Cost and funding\n\nThe estimated capital cost is 48 million, funded by the national health infrastructure fund (60%), the provincial budget (25%) and a development bank loan (15%). Annual running costs are estimated at 9 million.";
+// Sample files shipped in seed-assets/ (see lib/storage.ts), so the sample proposals' media work everywhere.
+export const UPLOADS = [
+  { id: "5eed0000-0000-4000-8000-000000000001", kind: "image", name: "proposed-site.jpg", contentType: "image/jpeg", file: "proposed-site.jpg" },
+  { id: "5eed0000-0000-4000-8000-000000000002", kind: "file", name: "Cost estimate breakdown.xlsx", contentType: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", file: "cost-estimate-breakdown.xlsx" },
+  { id: "5eed0000-0000-4000-8000-000000000003", kind: "file", name: "Site survey report.pdf", contentType: "application/pdf", file: "site-survey-report.pdf" },
+  { id: "5eed0000-0000-4000-8000-000000000004", kind: "file", name: "Bar association letter of support.pdf", contentType: "application/pdf", file: "bar-association-letter.pdf" },
+] as const;
+const [SITE, COST, SURVEY, LETTER] = UPLOADS.map((u) => u.id);
+
+const P1a = "## The problem\n\nAbout 340,000 people in the northern region live more than 70 km from a full-service hospital. Emergency patients travel an average of **95 minutes**, and the two existing clinics refer most cases out of the district ([regional referral data, 2025](https://health.example.gov/referrals-2025)).";
+const P1cost = `## Cost and funding\n\nThe estimated capital cost is 48 million. Annual running costs are estimated at 9 million.\n\n| Source | Share | Amount |\n| National health infrastructure fund | 60% | 28.8 million |\n| Provincial budget | 25% | 12 million |\n| Development bank loan | 15% | 7.2 million |\n\n::file ${COST} | Cost estimate breakdown.xlsx | 6 KB`;
 const P1v1 = P1a + "\n\n## Proposal\n\nBuild a 200-bed district hospital with emergency, maternity, surgery and outpatient departments on the public land next to the regional health office.";
 const P1v2 = P1v1 + "\n\n" + P1cost;
-const P1v3 = P1a + "\n\n## Proposal\n\nBuild a 200-bed district hospital on the public land next to the regional health office, in two phases. Phase 1 opens outpatient, maternity and emergency care within 18 months. Phase 2 adds surgery and inpatient wards.\n\n" + P1cost + "\n\n## Access\n\nThe site needs a 3 km upgraded access road and a bus stop on the regional route. The provincial roads authority would deliver the road alongside Phase 1.";
+const P1v3 =
+  P1a +
+  "\n\n## Proposal\n\nBuild a 200-bed district hospital on the public land next to the regional health office, in two phases:\n\n1. **Phase 1**, within 18 months: outpatient, maternity and emergency care.\n2. **Phase 2**: surgery and inpatient wards." +
+  `\n\n::image ${SITE} | The proposed site, looking north from the regional health office | Level open land beside a two-storey office building, bordered by the regional road on the east side | 32 KB\n\n` +
+  P1cost +
+  "\n\n## Access\n\nThe site needs a 3 km upgraded access road and a bus stop on the regional route. The provincial roads authority would deliver the road alongside Phase 1." +
+  `\n\n::video https://www.youtube.com/watch?v=northern-site | Walk-through of the proposed site and access route | 3:12\n\n::file ${SURVEY} | Site survey report.pdf | 40 KB`;
 const T1 = "Build a 200-bed district hospital in the northern region";
 const S1 = "The nearest full-service hospital is 70 km away for 340,000 residents. A district hospital would cut emergency travel times by more than half.";
 const P2why = "## Why\n\nCitizens currently need a formal information request to see most government contracts, and responses take an average of 11 weeks.";
@@ -44,7 +59,7 @@ const P2v1 = P2why + "\n\n## Proposal\n\nPublish every signed contract above 5 m
 const P2v2 = P2why + "\n\n## Proposal\n\nPublish every signed contract above 1 million, with amendments and the winning bid, in a searchable online register within 30 days of signing.\n\n## Redaction\n\nPersonal data and genuinely security-sensitive clauses may be redacted. Each redaction must cite its legal basis, and the redaction log is itself public.";
 const P3v1 = "## Proposal\n\nProvide a free daily meal to every primary school student in the district, starting with the 40 schools with the highest absence rates.\n\n## Local sourcing\n\nAt least 40% of produce would be bought from farms within the district through simplified, published tenders.\n\n## Expected outcomes\n\nHigher attendance, better nutrition indicators in annual health checks, and a stable buyer for small farms.";
 const P5v1 = "## The problem\n\nMore than half of people appearing in district courts for civil matters have no legal representation. Many cannot afford a lawyer and don't know that free help exists.\n\n## Proposal\n\nOpen a free legal aid desk in every district court, staffed two days a week by volunteer lawyers and supervised law students.";
-const P5draft = P5v1 + "\n\n## Funding\n\nThe bar association has offered volunteer hours. The remaining cost, mainly coordination staff and desk space, is about 600,000 a year.\n\n## Measuring success\n\nShare of civil cases with some form of legal advice, and the number of cases resolved before a full hearing.";
+const P5draft = P5v1 + "\n\n## Funding\n\nThe bar association has offered volunteer hours. The remaining cost, mainly coordination staff and desk space, is about **600,000 a year**.\n\n| Item | Per year |\n| Coordinator (1 full-time) | 380,000 |\n| Desk space and equipment | 140,000 |\n| Training for law students | 80,000 |\n\n## Measuring success\n\n- Share of civil cases with some form of legal advice\n- Number of cases resolved before a full hearing" + `\n\n::file ${LETTER} | Bar association letter of support.pdf | 25 KB`;
 const P4v1 = "## Proposal\n\nCreate a signed 4 km walking trail linking the old town's twelve listed buildings, with a small visitor centre in the former customs house.";
 const P4v2 = P4v1 + "\n\n## Why now\n\nVisitor numbers have grown 30% in three years, but most visitors stay less than half a day. A trail gives them reasons to stay longer and spreads spending beyond the main square.\n\n## Protecting the site\n\nThe trail uses existing streets. Coach parking moves to the edge of the old town, with a shuttle to the visitor centre.";
 const P7v1 = "## Proposal\n\nRun a 12-month pilot replacing diesel buses with 14 electric buses on routes 4 and 11, the two busiest city routes.\n\n## Costs\n\nThe buses are leased, so capital cost is limited to two depot charging stations. Fuel and maintenance savings are expected to cover about 70% of the lease.\n\n## What we'd measure\n\nReliability, operating cost per kilometre, air quality on both routes, and passenger satisfaction.";

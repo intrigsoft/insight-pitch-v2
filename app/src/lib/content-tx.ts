@@ -25,12 +25,3 @@ export async function contentTranslator(target: string, fallbackLang: string, it
     },
   };
 }
-
-/** Splits a proposal body into its translatable units: section headings and paragraphs. */
-export function bodyUnits(body: string) {
-  return body
-    .split(/\n\s*\n/)
-    .map((t) => t.trim())
-    .filter(Boolean)
-    .map((t) => (t.startsWith("## ") ? { h: true, text: t.slice(3) } : { h: false, text: t }));
-}
