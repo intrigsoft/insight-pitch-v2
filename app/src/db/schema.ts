@@ -244,6 +244,9 @@ export const insights = pgTable(
     kind: text("kind", { enum: ["concern", "suggestion", "clarification"] }).notNull(),
     text: text("text").notNull(),
     answered: boolean("answered").notNull().default(false),
+    // How relevant the point is to the proposal (0–100, from Jev), and the version it was judged against.
+    relevance: integer("relevance"),
+    relevanceVersion: integer("relevance_version"),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [index("insights_proposal").on(t.proposalId)],

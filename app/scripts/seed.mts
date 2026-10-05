@@ -74,8 +74,11 @@ for (const p of PROPOSALS) {
       if (likes) await db.insert(s.commentLikes).values(likeRows(rr.id, likes));
     }
   }
-  for (const [kind, text, votes, prefixes, answered] of INSIGHTS[p.key] ?? []) {
-    const [ins] = await db.insert(s.insights).values({ proposalId: row.id, kind: kind as "concern", text, answered: Boolean(answered) }).returning({ id: s.insights.id });
+  for (const [kind, text, votes, prefixes, answered, relevance] of INSIGHTS[p.key] ?? []) {
+    const [ins] = await db
+      .insert(s.insights)
+      .values({ proposalId: row.id, kind: kind as "concern", text, answered, relevance, relevanceVersion: p.versions.at(-1)?.n ?? null })
+      .returning({ id: s.insights.id });
     const sources = prefixes.map((pre) => commentIds.find((c) => c.text.startsWith(pre))!.id);
     await db.insert(s.insightSources).values(sources.map((commentId) => ({ insightId: ins.id, commentId })));
     if (votes) await db.insert(s.insightVotes).values(likers.slice(0, votes).map((userId) => ({ insightId: ins.id, userId })));

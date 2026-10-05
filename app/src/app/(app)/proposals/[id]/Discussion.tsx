@@ -36,6 +36,7 @@ type Insight = {
   answered: boolean;
   votes: number;
   voted: boolean;
+  relevance: number | null;
   sources: { commentId: string; parentId: string | null; firstName: string }[];
 };
 
@@ -84,6 +85,7 @@ export function Discussion({ proposalId, canComment, isAuthor, commentCount, me,
   const { track } = useTxActivity();
   const [pending, start] = useTransition();
   const [tab, setTab] = useState<"discussion" | "insights">("discussion");
+  const [insightSort, setInsightSort] = useState<"relevant" | "votes">("relevant");
   const [sort, setSort] = useState<Sort>("relevant");
   const [newComment, setNewComment] = useState("");
   const [check, setCheck] = useState<Check | null>(null);
@@ -282,7 +284,7 @@ export function Discussion({ proposalId, canComment, isAuthor, commentCount, me,
     );
   };
 
-  const relevance = (c: C) => {
+  const relevance = (c: { relevance: number | null; status?: string }) => {
     if (c.relevance == null || c.status === "pending") return null;
     const level = c.relevance >= 70 ? 3 : c.relevance >= 35 ? 2 : 1;
     const title = t(level === 3 ? "disc.relHigh" : level === 2 ? "disc.relMedium" : "disc.relLow");
@@ -378,6 +380,15 @@ export function Discussion({ proposalId, canComment, isAuthor, commentCount, me,
               {translateAll ? (txBusy ? t("disc.translatingDiscussion") : t("disc.showOriginalComments")) : t("disc.translateDiscussion")}
             </button>
           ) : null}
+          {showInsights && ins.length > 1 ? (
+            <label className="sort">
+              {t("list.sort")}
+              <select value={insightSort} onChange={(e) => setInsightSort(e.target.value as "relevant" | "votes")} aria-label={t("ins.sort")}>
+                <option value="relevant">{t("disc.sortRelevant")}</option>
+                <option value="votes">{t("ins.sortVotes")}</option>
+              </select>
+            </label>
+          ) : null}
           {!showInsights && view.length > 1 ? (
             <label className="sort">
               {t("list.sort")}
@@ -397,7 +408,11 @@ export function Discussion({ proposalId, canComment, isAuthor, commentCount, me,
         <div className="insights" role="tabpanel" aria-label={t("disc.insights")}>
           <div className="intro">{t("ins.intro")}</div>
           {GROUPS.map(([kind, labelKey, dot]) => {
-            const items = ins.filter((i) => i.kind === kind).sort((a, b) => Number(a.answered) - Number(b.answered) || b.votes - a.votes);
+            // Open points first; then the most relevant to the proposal (not yet judged last), or the most upvoted.
+            const rel = (i: Insight) => i.relevance ?? -1;
+            const items = ins
+              .filter((i) => i.kind === kind)
+              .sort((a, b) => Number(a.answered) - Number(b.answered) || (insightSort === "relevant" ? rel(b) - rel(a) || b.votes - a.votes : b.votes - a.votes || rel(b) - rel(a)));
             if (!items.length) return null;
             const nAnswered = items.filter((i) => i.answered).length;
             return (
@@ -423,6 +438,7 @@ export function Discussion({ proposalId, canComment, isAuthor, commentCount, me,
                               {t("ins.answered")}
                             </span>
                           ) : null}
+                          {relevance(i)}
                           {t("ins.raisedBy")}
                           {i.sources.map((s, si) => (
                             <button key={s.commentId} className="src" onClick={() => jump(s)}>{s.firstName}{si < i.sources.length - 1 ? "," : ""}</button>

@@ -290,6 +290,8 @@ export const en = {
   "ins.clarifications": "Clarifications",
   "ins.answeredCount": "{n} answered",
   "ins.upvote": "Upvote",
+  "ins.sort": "Sort insights",
+  "ins.sortVotes": "Most upvoted",
   "ins.votes": "Upvote: {n} votes",
   "ins.answered": "Answered",
   "ins.raisedBy": "Raised by",

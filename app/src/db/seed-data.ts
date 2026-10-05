@@ -189,24 +189,25 @@ export const COMMENT_ANALYSIS: [string, string, number, string?][] = [
 ];
 
 // Sample insights from the v3 design: [kind, text, votes, source comment prefixes, answered].
-export const INSIGHTS: Record<string, [string, string, number, string[], boolean?][]> = {
+// [kind, text, votes, comment prefixes, answered, relevance (0–100, as Jev judged it against the latest version)]
+export const INSIGHTS: Record<string, [string, string, number, string[], boolean, number][]> = {
   p1: [
-    ["concern", "No recruitment plan yet for the doctors and nurses the hospital needs", 9, ["Staffing is the real"]],
-    ["concern", "The capital estimate looks low against hospitals built in the last five years", 7, ["The capital estimate"]],
-    ["suggestion", "Reserve some beds for long-term care", 5, ["Could some beds", "Worth a separate"]],
-    ["clarification", "Who maintains the access road after construction?", 4, ["Who maintains the access"], true],
+    ["concern", "No recruitment plan yet for the doctors and nurses the hospital needs", 9, ["Staffing is the real"], false, 91],
+    ["concern", "The capital estimate looks low against hospitals built in the last five years", 7, ["The capital estimate"], false, 96],
+    ["suggestion", "Reserve some beds for long-term care", 5, ["Could some beds", "Worth a separate"], false, 57],
+    ["clarification", "Who maintains the access road after construction?", 4, ["Who maintains the access"], true, 65],
   ],
   p2: [
-    ["concern", "A 30-day deadline may be hard for smaller municipalities", 4, ["The 30-day deadline"]],
-    ["suggestion", "Require a standard open data format for published contracts", 3, ["A register is only"]],
+    ["concern", "A 30-day deadline may be hard for smaller municipalities", 4, ["The 30-day deadline"], false, 82],
+    ["suggestion", "Require a standard open data format for published contracts", 3, ["A register is only"], false, 74],
   ],
   p3: [
-    ["concern", "The finance score looks low for a daily meal at this scale", 1, ["The finance score"]],
-    ["clarification", "Who checks food safety for the smaller suppliers?", 2, ["Who checks food"]],
+    ["concern", "The finance score looks low for a daily meal at this scale", 1, ["The finance score"], false, 99],
+    ["clarification", "Who checks food safety for the smaller suppliers?", 2, ["Who checks food"], false, 83],
   ],
-  p8: [["clarification", "How will people without internet access check their titles?", 3, ["How will people"]]],
-  p5: [["clarification", "Will the desks cover family and tenancy cases?", 2, ["Would the desks"]]],
-  p4: [["concern", "Moving coach parking needs consultation with shop owners on the main square", 2, ["Moving coach parking"]]],
+  p8: [["clarification", "How will people without internet access check their titles?", 3, ["How will people"], false, 88]],
+  p5: [["clarification", "Will the desks cover family and tenancy cases?", 2, ["Would the desks"], false, 81]],
+  p4: [["concern", "Moving coach parking needs consultation with shop owners on the main square", 2, ["Moving coach parking"], false, 71]],
 };
 
 export const DEFAULT_SETTINGS = {

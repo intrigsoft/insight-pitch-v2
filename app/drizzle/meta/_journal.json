@@ -64,6 +64,13 @@
       "when": 1791200599108,
       "tag": "0008_summary_meta",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1791204888939,
+      "tag": "0009_insight_relevance",
+      "breakpoints": true
     }
   ]
 }

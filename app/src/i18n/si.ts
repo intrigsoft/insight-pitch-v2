@@ -277,6 +277,8 @@ export const si: Partial<Messages> = {
   "ins.clarifications": "පැහැදිලි කිරීම්",
   "ins.answeredCount": "පිළිතුරු දී ඇත: {n}",
   "ins.upvote": "සහාය ඡන්දය",
+  "ins.sort": "තීක්ෂ්ණ අදහස් වර්ග කරන්න",
+  "ins.sortVotes": "වැඩිම ඡන්ද ලැබූ",
   "ins.votes": "සහාය ඡන්ද: {n}",
   "ins.answered": "පිළිතුරු දී ඇත",
   "ins.raisedBy": "මතු කළේ",

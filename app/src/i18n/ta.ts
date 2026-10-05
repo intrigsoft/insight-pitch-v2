@@ -277,6 +277,8 @@ export const ta: Partial<Messages> = {
   "ins.clarifications": "விளக்கங்கள்",
   "ins.answeredCount": "{n} பதிலளிக்கப்பட்டன",
   "ins.upvote": "ஆதரவு வாக்கு",
+  "ins.sort": "நுண்ணறிவுகளை வரிசைப்படுத்து",
+  "ins.sortVotes": "அதிக வாக்குகள் பெற்றவை",
   "ins.votes": "ஆதரவு வாக்கு: {n} வாக்குகள்",
   "ins.answered": "பதிலளிக்கப்பட்டது",
   "ins.raisedBy": "எழுப்பியவர்",

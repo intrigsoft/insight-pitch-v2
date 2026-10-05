@@ -1,5 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { after } from "next/server";
+import { scoreInsightsSoon } from "@/lib/insight-relevance";
 import { requireUser } from "@/lib/auth";
 import { getProposalDetail, getStreams } from "@/lib/data";
 import { getSettings } from "@/lib/settings";
@@ -35,6 +37,8 @@ export default async function ProposalPage({ params, searchParams }: PageProps<"
   const user = await requireUser();
   const [p, streams, settings, i18n, allLangs] = await Promise.all([getProposalDetail(id, user), getStreams(), getSettings(), getI18n(), getLanguages()]);
   if (!p) notFound();
+  // Insights from before relevance scoring, or from an earlier version, are judged in the background.
+  if (p.insightsStale) after(() => scoreInsightsSoon(p.id));
   const { t, tn, lang: readerLang, locale } = i18n;
 
   const latest = p.versions.at(-1) ?? null;

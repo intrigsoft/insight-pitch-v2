@@ -80,6 +80,12 @@ Source design: claude.ai/design project "Insight Pitch proposal management"
 - [x] v8: summary helper under the summary field: generate, update when the proposal changes, regenerate; an empty summary is written on save or publish
 - [x] Sample proposals updated to the v7 content (bold, links, lists, tables, image, video, attachments)
 
+### Insight relevance (added 5 Oct)
+
+- [x] Each insight is judged by Jev for relevance to the latest version (0–100), shown like comment relevance
+- [x] Insights tab sorts by relevance by default, with "Most upvoted" as the alternative; answered points stay last
+- [x] Judged when an insight is created, again after each new version, and in the background for older insights when the proposal is opened
+
 ## Decisions
 
 - **Jev is the reviewer.** The design captions scores "Extracted from the proposal by Jev". Publishing sends the
@@ -185,6 +191,8 @@ Source design: claude.ai/design project "Insight Pitch proposal management"
 - **Version descriptions.** Written by gpt-6-luna from the detected changes, in the proposal's language, when the draft is saved; the author can edit or rewrite it. If a description was written automatically for different content, publishing writes a fresh one. Without AI, a description is built from the change list.
 - **Summaries (v8).** Written by gpt-6-luna from the title and body (at most 40 words, in the proposal's language), or the first sentence or two of the body without AI. The draft remembers whether its summary was generated and from which body, so "the proposal has changed since this summary was written" survives a reload. Typing in the summary makes it the author's own.
 - **Text only** is remembered in a cookie, so the server doesn't send images to readers who turned them off.
+
+- **Insight relevance.** One Jev call per proposal scores all its insights that haven't been judged against the latest version (five levels, from "unrelated" to "central: cost, feasibility, who it serves or its main risk"), using the probability-weighted level so close calls still order sensibly. Relevance is about the proposal as it now stands, so publishing a new version queues a fresh judgement. Ties sort by votes. `npm run insights:relevance [-- --all]` scores everything in one go.
 
 ## Status summary
 

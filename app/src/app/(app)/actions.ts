@@ -28,6 +28,7 @@ import { addToInsights, applyUserFlags, checkCached, latestVersion } from "@/lib
 import { detectLanguage } from "@/lib/comment-ai";
 import { translateMissing } from "@/lib/translate";
 import { refreshStrengthsSoon } from "@/lib/strengths";
+import { scoreInsightsSoon } from "@/lib/insight-relevance";
 import { getI18n, getLanguages } from "@/i18n/server";
 
 const tr = async () => (await getI18n()).t;
@@ -328,6 +329,8 @@ export async function publish(input: EditorInput): Promise<Result<{ id: string; 
     });
   }
   after(() => refreshStrengthsSoon(user.id));
+  // Insights are judged against the latest version, so judge them again.
+  after(() => scoreInsightsSoon(id!));
   revalidatePath("/", "layout");
   return { ok: true, id: id!, version: next, translating: targets.length };
 }

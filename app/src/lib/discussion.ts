@@ -2,6 +2,7 @@ import "server-only";
 import { and, desc, eq, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { commentFlags, comments, insightSources, insights, proposalVersions } from "@/db/schema";
+import { scoreInsightsSoon } from "./insight-relevance";
 import { checkComment, insightKindFor, insightText, matchInsight, type CommentCheck } from "./comment-ai";
 
 // Two different readers flagging a comment hides it until a moderator reviews it.
@@ -63,6 +64,7 @@ export async function addToInsights(commentId: string) {
   const text = await insightText(kind, c.body, v?.title ?? "");
   const [ins] = await db.insert(insights).values({ proposalId: c.proposalId, kind, text }).returning({ id: insights.id });
   await db.insert(insightSources).values({ insightId: ins.id, commentId });
+  await scoreInsightsSoon(c.proposalId);
 }
 
 /** Hides a comment once enough readers flag it, and un-hides it if they withdraw their flags before review. */

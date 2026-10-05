@@ -118,6 +118,8 @@ export type InsightItem = {
   answered: boolean;
   votes: number;
   voted: boolean;
+  /** 0–100, how relevant the point is to the proposal; null until Jev has judged it. */
+  relevance: number | null;
   sources: { commentId: string; parentId: string | null; firstName: string }[];
 };
 
@@ -130,6 +132,8 @@ export type ProposalDetail = {
   following: boolean;
   comments: CommentNode[];
   insights: InsightItem[];
+  /** Some insights haven't been judged against the latest version yet. */
+  insightsStale: boolean;
 };
 
 /** Returns null when the proposal doesn't exist or is someone else's unpublished draft. */
@@ -205,6 +209,7 @@ export async function getProposalDetail(id: string, user: CurrentUser): Promise<
       kind: i.kind,
       text: i.text,
       answered: i.answered,
+      relevance: i.relevance,
       votes: voteRows.filter((v) => v.insightId === i.id).length,
       voted: voteRows.some((v) => v.insightId === i.id && v.userId === user.id),
       sources: sourceRows
@@ -226,6 +231,7 @@ export async function getProposalDetail(id: string, user: CurrentUser): Promise<
     following: followRows.length > 0,
     comments: top,
     insights: insightList,
+    insightsStale: insightRows.some((i) => i.relevanceVersion !== versions.at(-1)?.number),
   };
 }
 
