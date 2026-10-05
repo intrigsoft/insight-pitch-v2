@@ -4,16 +4,16 @@
 export const SEED_PASSWORD = "insight2026";
 
 export const PEOPLE = [
-  { key: "maya", name: "Maya Chen", initials: "MC", email: "maya.chen@insight.gov", role: "admin" },
-  { key: "priya", name: "Priya Raman", initials: "PR", email: "priya.raman@insight.gov", role: "official" },
-  { key: "daniel", name: "Daniel Okafor", initials: "DO", email: "daniel.okafor@insight.gov", role: "official" },
-  { key: "lena", name: "Lena Fischer", initials: "LF", email: "lena.fischer@example.org", role: "citizen" },
-  { key: "tomas", name: "Tomás Herrera", initials: "TH", email: "tomas.herrera@example.org", role: "citizen" },
-  { key: "sam", name: "Sam Whitfield", initials: "SW", email: "sam.whitfield@example.org", role: "citizen" },
-  { key: "jun", name: "Jun Park", initials: "JP", email: "jun.park@example.org", role: "citizen" },
-  { key: "ava", name: "Ava Moreau", initials: "AM", email: "ava.moreau@example.org", role: "citizen" },
-  { key: "kai", name: "Kai Moreno", initials: "KM", email: "kai.moreno@example.org", role: "citizen" },
-  { key: "rob", name: "Rob Kessler", initials: "RK", email: "rob.kessler@example.org", role: "citizen" },
+  { key: "maya", name: "Maya Chen", initials: "MC", email: "maya.chen@insight.gov", role: "admin", title: "Policy advisor", org: "Ministry of Public Administration", location: "Capital district", joined: "2025-01-01", bio: "I run the Insight Pitch programme and draft proposals on access to justice and rural health.", reads: ["en", "si"], strengthsPublic: false },
+  { key: "priya", name: "Priya Raman", initials: "PR", email: "priya.raman@insight.gov", role: "official", title: "Health infrastructure planner", org: "Regional Health Office", location: "Northern region", joined: "2025-03-01", bio: "I plan hospital and clinic capacity for the northern region. Most of my proposals start from referral and travel-time data.", reads: ["en", "si"], strengthsPublic: true },
+  { key: "daniel", name: "Daniel Okafor", initials: "DO", email: "daniel.okafor@insight.gov", role: "citizen", title: "Volunteer", org: "Open Contracting Network", location: "Capital district", joined: "2025-04-01", bio: "Procurement transparency volunteer. I read contracts so others don’t have to.", reads: ["en", "fr"], strengthsPublic: true },
+  { key: "lena", name: "Lena Fischer", initials: "LF", email: "lena.fischer@example.org", role: "citizen", title: "School board member", org: "", location: "Eastern district", joined: "2025-05-01", bio: "Parent of two and member of the district school board.", reads: ["en", "es"], strengthsPublic: false },
+  { key: "tomas", name: "Tomás Herrera", initials: "TH", email: "tomas.herrera@example.org", role: "official", title: "Heritage officer", org: "Old Town Municipal Council", location: "Old Town", joined: "2025-02-01", bio: "I look after the old town’s listed buildings and work with traders on visitor plans.", reads: ["en", "es", "pt"], strengthsPublic: true },
+  { key: "sam", name: "Sam Whitfield", initials: "SW", email: "sam.whitfield@example.org", role: "citizen", title: "Transport engineer", org: "", location: "Capital district", joined: "2025-06-01", bio: "Civil engineer working on public transit. Interested in anything that moves people more reliably.", reads: ["en"], strengthsPublic: true },
+  { key: "jun", name: "Jun Park", initials: "JP", email: "jun.park@example.org", role: "official", title: "Records modernisation lead", org: "Land Registry Department", location: "Capital district", joined: "2025-03-01", bio: "Leading the move from paper land titles to digital records.", reads: ["en"], strengthsPublic: true },
+  { key: "ava", name: "Ava Moreau", initials: "AM", email: "ava.moreau@example.org", role: "citizen", title: "Retired quantity surveyor", org: "", location: "Southern district", joined: "2025-07-01", bio: "Forty years of costing public buildings. I check whether the numbers add up.", reads: ["en", "fr"], strengthsPublic: false },
+  { key: "kai", name: "Kai Moreno", initials: "KM", email: "kai.moreno@example.org", role: "citizen", title: "", org: "", location: "Western district", joined: "2026-08-01", bio: "", reads: ["en"], strengthsPublic: false },
+  { key: "rob", name: "Rob Kessler", initials: "RK", email: "rob.kessler@example.org", role: "citizen", title: "", org: "", location: "Central district", joined: "2026-09-01", bio: "", reads: ["en"], strengthsPublic: false },
 ] as const;
 
 export type PersonKey = (typeof PEOPLE)[number]["key"];

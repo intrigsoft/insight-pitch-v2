@@ -31,7 +31,7 @@ test("following a proposal adds it to the Following tab", async ({ page }) => {
   await expect(page.getByRole("status")).toHaveText("You’ll be notified about new versions");
   await expect(page.getByRole("button", { name: "Following ✓" })).toBeVisible();
   await page.goto("/?tab=following");
-  await expect(page.locator("a.row")).toHaveCount(2);
+  await expect(page.locator(".rows .row")).toHaveCount(2);
   await openProposal(page, TITLES.hospital);
   await page.getByRole("button", { name: "Following ✓" }).click();
   await expect(page.getByRole("status")).toHaveText("Unfollowed");
@@ -59,7 +59,7 @@ test("an unpublished draft is private and closed for comments", async ({ page, b
 
   const other = await browser.newPage();
   await login(other, "priya");
-  await expect(other.locator("a.row").filter({ hasText: TITLES.telemedicine })).toHaveCount(0);
+  await expect(other.locator(".rows .row").filter({ hasText: TITLES.telemedicine })).toHaveCount(0);
   await other.goto(url);
   await expect(other.getByRole("heading", { name: "Not found" })).toBeVisible();
   await other.close();

@@ -36,6 +36,13 @@
       "when": 1791026846756,
       "tag": "0004_translation_checks",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1791172612928,
+      "tag": "0005_profiles",
+      "breakpoints": true
     }
   ]
 }

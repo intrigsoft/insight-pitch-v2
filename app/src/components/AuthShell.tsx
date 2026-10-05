@@ -1,4 +1,5 @@
 import { getI18n, getLanguages } from "@/i18n/server";
+import { LogoMark } from "./icons";
 import { getSettings } from "@/lib/settings";
 import { LanguageMenu } from "./LanguageMenu";
 
@@ -9,7 +10,7 @@ export async function AuthShell({ children }: { children: React.ReactNode }) {
   return (
     <div className="login" data-screen-label="Login">
       <div className="login-hero">
-        <div className="brand" lang="en"><span className="l1">Insight</span><span className="l2">Pitch</span></div>
+        <div className="brand" lang="en"><LogoMark size={32} light /><span className="words"><span className="l1">Insight</span><span className="l2">Pitch</span></span></div>
         <div className="pitch">
           <h1>{t("auth.heroTitle")}</h1>
           <p>{t("auth.heroText")}</p>

@@ -4,7 +4,7 @@ import { login, resetDb, TITLES } from "./helpers";
 test.beforeAll(resetDb);
 test.beforeEach(async ({ page }) => login(page));
 
-const rows = (page: Page) => page.locator("a.row");
+const rows = (page: Page) => page.locator(".rows .row");
 const tab = (page: Page, name: string) => page.getByRole("navigation", { name: "Library" }).getByRole("link", { name: new RegExp(`^${name}`) });
 const streamLink = (page: Page, name: string) => page.getByRole("navigation", { name: "Streams" }).getByRole("link", { name: new RegExp(`^${name}`) });
 

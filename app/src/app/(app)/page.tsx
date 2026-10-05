@@ -2,13 +2,11 @@ import Link from "next/link";
 import { requireUser } from "@/lib/auth";
 import { getStreams, getVisibleProposals } from "@/lib/data";
 import { getSettings } from "@/lib/settings";
-import { timeAgo } from "@/lib/format";
-import { formatScore } from "@/lib/scale";
-import { displayContent, sortedScores } from "@/lib/proposal-view";
+import { displayContent } from "@/lib/proposal-view";
 import { contentTranslator } from "@/lib/content-tx";
 import { getI18n } from "@/i18n/server";
-import { CommentIcon } from "@/components/icons";
-import { Globe } from "@/components/LanguageMenu";
+import { ProposalRow } from "@/components/ProposalRow";
+import { getFollowedPeople } from "@/lib/profile";
 import { TranslateMissing } from "@/components/TranslateMissing";
 import { SortSelect } from "./SortSelect";
 
@@ -30,7 +28,7 @@ export default async function ProposalsPage({ searchParams }: PageProps<"/">) {
   const sp = await searchParams;
   const one = (k: string) => (Array.isArray(sp[k]) ? sp[k][0] : sp[k]) ?? "";
   const user = await requireUser();
-  const [visible, streams, settings, i18n] = await Promise.all([getVisibleProposals(user), getStreams(), getSettings(), getI18n()]);
+  const [visible, streams, settings, i18n, followedPeople] = await Promise.all([getVisibleProposals(user), getStreams(), getSettings(), getI18n(), getFollowedPeople(user.id)]);
   const { t, tn, lang } = i18n;
 
   // Titles, summaries and stream names in the reader's language. Drafts stay as written: only their author sees them.
@@ -57,7 +55,8 @@ export default async function ProposalsPage({ searchParams }: PageProps<"/">) {
     all: visible,
     mine,
     drafts: mine.filter((p) => p.draft),
-    following: visible.filter((p) => p.following),
+    // Proposals the user follows, and published proposals by people they follow.
+    following: visible.filter((p) => p.following || (p.latest && followedPeople.has(p.author.id))),
   };
   const tabLabel = t(TABS.find(([id]) => id === tab)![1]);
 
@@ -122,43 +121,9 @@ export default async function ProposalsPage({ searchParams }: PageProps<"/">) {
 
         {rows.length > 0 ? (
           <div className="rows">
-            {rows.map((p) => {
-              const c = shown(p);
-              const isMine = p.author.id === user.id;
-              const isDraft = !p.latest;
-              const hasPending = Boolean(p.latest && p.draft && isMine);
-              return (
-                <Link key={p.id} href={`/proposals/${p.id}`} className="row">
-                  {isDraft || hasPending ? (
-                    <div className="badges">
-                      {isDraft ? <span className="pill pill-amber">{t("list.draft")}</span> : null}
-                      {hasPending ? <span className="pill pill-amber">{t("list.unpublishedChanges")}</span> : null}
-                    </div>
-                  ) : null}
-                  <h2>{c.title}</h2>
-                  {c.summary ? <p>{c.summary}</p> : null}
-                  {p.scores.length ? (
-                    <div className="score-chips">
-                      {sortedScores(p.scores, streams).map((s) => (
-                        <span key={s.streamId} className="score-chip">
-                          <span className="dot dot-8" style={{ background: s.stream.color }} />
-                          {streamName(s.stream)}
-                          {settings.showPublic ? <b>{formatScore(s.score, settings.scale)}</b> : null}
-                        </span>
-                      ))}
-                    </div>
-                  ) : null}
-                  <div className="row-meta">
-                    <span className={`avatar av-24`}>{p.author.initials}</span>
-                    <span className="author">{p.author.name}</span>
-                    <span>·</span><span>{t("list.updated", { when: timeAgo(p.updatedAt, i18n) })}</span>
-                    <span>·</span><span>{p.latest ? `v${p.latest.number}` : t("list.notPublished")}</span>
-                    {c.translated && settings.txLabel ? (<><span>·</span><span className="tx-tag"><Globe size={13} />{t("list.translated")}</span></>) : null}
-                    <span className="comment-count" aria-label={tn("list.comments", p.commentCount)}><CommentIcon />{p.commentCount}</span>
-                  </div>
-                </Link>
-              );
-            })}
+            {rows.map((p) => (
+              <ProposalRow key={p.id} p={p} shown={shown(p)} isMine={p.author.id === user.id} streams={streams} streamName={streamName} settings={settings} i18n={i18n} />
+            ))}
           </div>
         ) : (
           <div className="empty">

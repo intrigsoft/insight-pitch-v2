@@ -11,7 +11,7 @@ const db = drizzle(sql, { schema: s });
 const now = Date.now();
 const ago = (age: string) => new Date(now - ageToMs(age));
 
-await sql`truncate users, sessions, streams, stream_links, proposals, proposal_versions, proposal_drafts,
+await sql`truncate users, sessions, user_follows, streams, stream_links, proposals, proposal_versions, proposal_drafts,
   proposal_streams, follows, comments, comment_likes, comment_flags, insights, insight_sources, insight_votes,
   settings, languages, translations restart identity cascade`;
 
@@ -23,7 +23,12 @@ await db.insert(s.languages).values(SEED_LANGUAGES.map((code, i) => {
 const hash = await bcrypt.hash(SEED_PASSWORD, 10);
 const userRows = await db
   .insert(s.users)
-  .values(PEOPLE.map((p) => ({ email: p.email, name: p.name, initials: p.initials, role: p.role, passwordHash: hash })))
+  .values(
+    PEOPLE.map((p) => ({
+      email: p.email, name: p.name, initials: p.initials, role: p.role, passwordHash: hash,
+      title: p.title, org: p.org, location: p.location, bio: p.bio, reads: [...p.reads], strengthsPublic: p.strengthsPublic, createdAt: new Date(p.joined),
+    })),
+  )
   .returning({ id: s.users.id, email: s.users.email });
 const uid = Object.fromEntries(PEOPLE.map((p) => [p.key, userRows.find((u) => u.email === p.email)!.id]));
 

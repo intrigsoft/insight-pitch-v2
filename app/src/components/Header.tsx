@@ -5,7 +5,7 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import type { CurrentUser } from "@/lib/auth";
 import { logout } from "@/app/auth-actions";
-import { PlusIcon, SearchIcon, SlidersIcon } from "./icons";
+import { LogoMark, PlusIcon, SearchIcon, SlidersIcon } from "./icons";
 import { useI18n } from "@/i18n/client";
 import { LanguageMenu, type MenuLanguage } from "./LanguageMenu";
 
@@ -49,7 +49,7 @@ export function Header({ user, languages, defaultLanguage }: { user: CurrentUser
   return (
     <header className="header">
       <div className="header-inner">
-        <Link href="/" className="logo" aria-label={t("brand.home")} lang="en"><span className="l1">Insight</span><span className="l2">Pitch</span></Link>
+        <Link href="/" className="logo" aria-label={t("brand.home")} lang="en"><LogoMark /><span className="words"><span className="l1">Insight</span><span className="l2">Pitch</span></span></Link>
         <form className="search" role="search" onSubmit={(e) => e.preventDefault()}>
           <SearchIcon />
           <input value={query} onChange={(e) => onQuery(e.target.value)} placeholder={t("header.search")} aria-label={t("header.search")} />
@@ -64,10 +64,11 @@ export function Header({ user, languages, defaultLanguage }: { user: CurrentUser
           <button className="avatar-btn" onClick={() => setMenuOpen((o) => !o)} aria-haspopup="menu" aria-expanded={menuOpen} aria-label={t("header.accountMenu")}>{user.initials}</button>
           {menuOpen ? (
             <div className="menu" role="menu">
-              <div className="menu-head">
+              <Link href={`/people/${user.id}`} className="menu-head menu-head-btn" onClick={() => setMenuOpen(false)}>
                 <div className="who">{user.name}<span className="role">{t(`role.${user.role}`)}</span></div>
                 <div className="mail">{user.email}</div>
-              </div>
+              </Link>
+              <Link role="menuitem" href={`/people/${user.id}`} className="menu-item" onClick={() => setMenuOpen(false)}>{t("header.yourProfile")}</Link>
               <Link role="menuitem" href="/?tab=mine" className="menu-item" onClick={() => setMenuOpen(false)}>{t("header.myProposals")}</Link>
               {isAdmin ? <Link role="menuitem" href="/settings" className="menu-item" onClick={() => setMenuOpen(false)}>{t("header.adminSettings")}</Link> : null}
               <form action={logout}><button role="menuitem" type="submit" className="menu-item danger">{t("header.signOut")}</button></form>

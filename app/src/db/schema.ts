@@ -23,6 +23,14 @@ export const users = pgTable("users", {
   role: text("role", { enum: ["admin", "official", "citizen"] }).notNull().default("citizen"),
   // Reading and interface language (a code from the languages table).
   language: text("language").notNull().default("en"),
+  // Public profile.
+  title: text("title").notNull().default(""),
+  org: text("org").notNull().default(""),
+  location: text("location").notNull().default(""),
+  bio: text("bio").notNull().default(""),
+  // Languages the person reads, shown on their profile.
+  reads: jsonb("reads").$type<string[]>().notNull().default(["en"]),
+  strengthsPublic: boolean("strengths_public").notNull().default(false),
   passwordHash: text("password_hash").notNull(),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
@@ -127,6 +135,21 @@ export const follows = pgTable(
       .references(() => proposals.id, { onDelete: "cascade" }),
   },
   (t) => [primaryKey({ columns: [t.userId, t.proposalId] })],
+);
+
+// People following other people: notified when they publish.
+export const userFollows = pgTable(
+  "user_follows",
+  {
+    followerId: uuid("follower_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    followeeId: uuid("followee_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [primaryKey({ columns: [t.followerId, t.followeeId] })],
 );
 
 export const comments = pgTable(

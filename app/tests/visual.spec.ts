@@ -79,5 +79,13 @@ for (const device of ["desktop", "mobile"] as const) {
       await page.goto("/settings");
       await compare(page, "settings", device);
     });
+
+    test("profile", async ({ page }) => {
+      await login(page);
+      await openProposal(page, TITLES.hospital);
+      await page.locator(".byline").getByRole("link", { name: "Priya Raman" }).click();
+      await expect(page.getByRole("heading", { name: "Priya Raman", level: 1 })).toBeVisible();
+      await compare(page, "profile", device);
+    });
   });
 }

@@ -17,3 +17,18 @@ export const CommentIcon = () => (
 export const HeartIcon = () => (
   <svg width="13" height="13" viewBox="0 0 24 24" fill="#2e5e45" aria-hidden="true"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1-1.1a5.5 5.5 0 0 0-7.8 7.8L12 21l8.8-8.6a5.5 5.5 0 0 0 0-7.8z" /></svg>
 );
+export const EyeIcon = () => (
+  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" style={{ flex: "none" }}><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z" /><circle cx="12" cy="12" r="3" /></svg>
+);
+// The Insight Pitch mark: four rounded tiles, one with a speech-bubble corner. `light` is the version for dark backgrounds.
+export const LogoMark = ({ size = 28, light = false }: { size?: number; light?: boolean }) => {
+  const [a, b, c, d] = light ? ["#e3ece5", "#9fbaa8", "#f1efe6", "#6f9580"] : ["#2e5e45", "#6f9580", "#1f3d2e", "#9fbaa8"];
+  return (
+    <svg className="logo-mark" width={size} height={size} viewBox="0 0 64 64" aria-hidden="true">
+      <rect x="6" y="6" width="25" height="25" rx="6" fill={a} />
+      <rect x="33" y="6" width="25" height="25" rx="6" fill={b} />
+      <path d="M12 33H25A6 6 0 0 1 31 39V52A6 6 0 0 1 25 58H6V39A6 6 0 0 1 12 33Z" fill={c} />
+      <rect x="33" y="33" width="25" height="25" rx="6" fill={d} />
+    </svg>
+  );
+};

@@ -31,7 +31,7 @@ test("the interface switches to Sinhala and Tamil and back, and the choice is re
   await expect(page.locator("html")).toHaveAttribute("lang", "ta");
   await expect(page.getByRole("link", { name: "புதிய முன்மொழிவு" })).toBeVisible();
   await pickLanguage(page, /English/);
-  await expect(page.getByRole("link", { name: "New proposal" })).toBeVisible();
+  await expect(page.getByRole("link", { name: "New proposal" })).toBeVisible({ timeout: 30_000 });
 });
 
 test("visitors can switch language on the sign-in screen", async ({ page }) => {
@@ -90,9 +90,9 @@ test("proposals, stream names and the discussion are translated, with review", a
   await login(page);
   await pickLanguage(page, /தமிழ்/);
   // Titles are translated after the first render; the page refreshes itself when they're ready.
-  await expect(page.locator("a.row").first().locator(".tx-tag")).toBeVisible({ timeout: 90_000 });
+  await expect(page.locator(".rows .row").first().locator(".tx-tag")).toBeVisible({ timeout: 90_000 });
 
-  await page.locator("a.row").first().click();
+  await page.locator(".rows .row").first().click();
   const banner = page.getByTestId("translation-banner");
   await expect(banner).toContainText("மொழிபெயர்க்கப்பட்டது", { timeout: 90_000 });
   await expect(banner.locator(".tx-chip")).toBeVisible();

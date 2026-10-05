@@ -68,7 +68,7 @@ test("streams in use can't be deleted, only deactivated", async ({ page }) => {
   await page.goto("/");
   await expect(page.getByRole("navigation", { name: "Streams" }).getByRole("link", { name: /^Tourism/ })).toHaveCount(0);
   // Existing proposals keep the stream.
-  await expect(page.locator("a.row").filter({ hasText: "Heritage trail" }).locator(".score-chip").first()).toContainText("Tourism");
+  await expect(page.locator(".rows .row").filter({ hasText: "Heritage trail" }).locator(".score-chip").first()).toContainText("Tourism");
   await page.goto("/proposals/new");
   await expect(page.getByRole("button", { name: "Tourism" })).toHaveCount(0);
 });
@@ -78,7 +78,7 @@ test("score scale and public score setting change how scores show", async ({ pag
   await page.getByRole("button", { name: "0 – 100" }).click();
   await saved(page, () => expect(page.getByRole("button", { name: "0 – 100" })).toHaveAttribute("aria-pressed", "true", { timeout: 2000 }));
   await page.goto("/");
-  const hospital = page.locator("a.row").filter({ hasText: TITLES.hospital });
+  const hospital = page.locator(".rows .row").filter({ hasText: TITLES.hospital });
   await expect(hospital.locator(".score-chip").first()).toHaveText("Healthcare90");
   await hospital.click();
   await expect(page.locator(".score-row").first()).toHaveText("Healthcare90/100");
@@ -89,8 +89,8 @@ test("score scale and public score setting change how scores show", async ({ pag
   await page.getByRole("switch", { name: "Show scores on the public listing" }).click();
   await saved(page, () => expect(page.getByRole("switch", { name: "Show scores on the public listing" })).toHaveAttribute("aria-checked", "false", { timeout: 2000 }));
   await page.goto("/");
-  await expect(page.locator("a.row").filter({ hasText: TITLES.hospital }).locator(".score-chip").first()).toHaveText("Healthcare");
-  await page.locator("a.row").filter({ hasText: TITLES.hospital }).click();
+  await expect(page.locator(".rows .row").filter({ hasText: TITLES.hospital }).locator(".score-chip").first()).toHaveText("Healthcare");
+  await page.locator(".rows .row").filter({ hasText: TITLES.hospital }).click();
   await expect(page.locator(".score-row").first()).toHaveText("Healthcare5/5");
 });
 

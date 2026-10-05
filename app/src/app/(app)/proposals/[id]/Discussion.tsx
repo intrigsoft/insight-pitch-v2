@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useOptimistic, useRef, useState, useTransition } from "react";
 import { useToast } from "@/components/Toast";
@@ -275,7 +276,7 @@ export function Discussion({ proposalId, canComment, isAuthor, commentCount, me,
     return (
       <div className={`bubble${flagged ? " flagged" : ""}${highlight === c.id ? " highlight" : ""}`}>
         {note ? <div className="flag-note"><WarnIcon />{note}</div> : null}
-        <div className="an">{c.author.name}</div>
+        <div className="an"><Link href={`/people/${c.author.id}`} className="name-link">{c.author.name}</Link></div>
         <div className="tx" lang={s.translated ? s.target : langOf(c)}>{mention ? <span className="mention">{mention} </span> : null}{body}</div>
       </div>
     );

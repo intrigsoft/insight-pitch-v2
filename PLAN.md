@@ -58,6 +58,16 @@ Source design: claude.ai/design project "Insight Pitch proposal management"
 - [x] Admin settings → Languages: add / enable / remove languages, default language, translation switches, never-translate list, cache counts, clear cache
 - [x] Tests for all of the above
 
+### v5: profiles and logo (added 5 Oct)
+- [x] Logo mark in the header and sign-in panel; SVG favicon and Apple touch icon
+- [x] Profile page `/people/[id]`: role, headline, Proposals / Comments tabs, About card, "Active in" streams
+- [x] Strengths: per-stream 1–10 from published proposals' stream scores and comment relevance and likes; private by default with a Public switch
+- [x] Edit profile drawer: name, job title, organisation, location, bio (280), languages read; role is read-only
+- [x] Follow a person: their published proposals join your Following list
+- [x] Author names link to profiles (list rows, proposal byline, comments, replies); "Your profile" in the account menu
+- [x] Sample people get the design's profiles (seed and a data migration for existing databases)
+- [x] Tests, and a visual comparison of the profile screen against v5
+
 ## Decisions
 
 - **Jev is the reviewer.** The design captions scores "Extracted from the proposal by Jev". Publishing sends the
@@ -142,6 +152,14 @@ Source design: claude.ai/design project "Insight Pitch proposal management"
   later to show it. Removing a comment drops it as a source; an insight with no sources left is deleted.
 - **Seeded discussion analysis comes from the design.** The sample comments' kinds, relevance, flags and insights
   are the v3 design's values. `npm run comments:analyze` runs Jev over any comment without an analysis.
+
+- **Strengths formula follows the design.** Per stream: the stream score of each published proposal the person wrote,
+  plus for each visible comment on a proposal (score / 10) × relevance × 3 × (1 + 0.1 × likes, max 10 likes). The sum
+  maps to 1–10 as `10 × (1 − e^(−sum / 8))`; top five streams with a sum of at least 1. Held or hidden comments don't
+  count. The caption says "Calculated from…" rather than naming the scoring engine.
+- **Following a person** is stored in `user_follows`. There are no notifications yet, so following shows up as the
+  person's published proposals in the Following tab.
+- **Sample roles follow the v5 profiles**: Daniel is a citizen, Tomás and Jun are officials.
 
 ## Status summary
 

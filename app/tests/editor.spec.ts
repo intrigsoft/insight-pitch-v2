@@ -43,7 +43,7 @@ test("new proposal: validation, save draft, then publish v1", async ({ page }) =
   await expect(page.getByLabel("Add to the discussion")).toBeVisible();
 
   await page.goto("/");
-  await expect(page.locator("a.row").first()).toContainText("Protected cycle lanes on the river corridor");
+  await expect(page.locator(".rows .row").first()).toContainText("Protected cycle lanes on the river corridor");
 });
 
 test("publishing a new version requires a note and keeps history", async ({ page }) => {
@@ -64,7 +64,7 @@ test("publishing a new version requires a note and keeps history", async ({ page
   await expect(history.getByRole("link").first()).toContainText("Added funding and success measures");
   await expect(page.getByRole("link", { name: "Edit as new version" })).toBeVisible();
   await page.goto("/");
-  await expect(page.locator("a.row").filter({ hasText: TITLES.legal })).not.toContainText("Unpublished changes");
+  await expect(page.locator(".rows .row").filter({ hasText: TITLES.legal })).not.toContainText("Unpublished changes");
 });
 
 test("cancel and back links return without saving", async ({ page }) => {
@@ -72,7 +72,7 @@ test("cancel and back links return without saving", async ({ page }) => {
   await page.getByLabel("Proposal title").fill("Throwaway idea");
   await page.getByRole("link", { name: "Cancel" }).click();
   await expect(page).toHaveURL("/");
-  await expect(page.locator("a.row").filter({ hasText: "Throwaway idea" })).toHaveCount(0);
+  await expect(page.locator(".rows .row").filter({ hasText: "Throwaway idea" })).toHaveCount(0);
   await openProposal(page, TITLES.telemedicine);
   await page.getByRole("link", { name: "Continue draft" }).click();
   await expect(page.getByText("Editing draft", { exact: true })).toBeVisible();

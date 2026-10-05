@@ -149,7 +149,7 @@ export default async function ProposalPage({ params, searchParams }: PageProps<"
           {shown.summary ? <p className={`view-summary${dim ? " dim" : ""}`} lang={textLang}>{T(shown.summary)}</p> : null}
           <div className="byline">
             <span className="avatar av-38">{p.author.initials}</span>
-            <div className="who"><b>{p.author.name}</b><span>{metaLine}</span></div>
+            <div className="who"><b><Link href={`/people/${p.author.id}`} className="name-link">{p.author.name}</Link></b><span>{metaLine}</span></div>
             {latest && enabled.length > 1 ? (
               <ProposalLangMenu
                 current={viewLang}
