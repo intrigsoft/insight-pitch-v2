@@ -26,11 +26,14 @@ await db.insert(s.uploads).values(
 );
 
 const hash = await bcrypt.hash(SEED_PASSWORD, 10);
+// The shared sample password is public, so a public demo sets SEED_ADMIN_PASSWORD to keep the admin account private.
+const adminPassword = process.env.SEED_ADMIN_PASSWORD?.trim();
+const adminHash = adminPassword ? await bcrypt.hash(adminPassword, 10) : hash;
 const userRows = await db
   .insert(s.users)
   .values(
     PEOPLE.map((p) => ({
-      email: p.email, name: p.name, initials: p.initials, role: p.role, passwordHash: hash,
+      email: p.email, name: p.name, initials: p.initials, role: p.role, passwordHash: p.role === "admin" ? adminHash : hash,
       title: p.title, org: p.org, location: p.location, bio: p.bio, reads: [...p.reads], strengthsPublic: p.strengthsPublic, createdAt: new Date(p.joined),
     })),
   )

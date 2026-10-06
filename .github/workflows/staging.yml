@@ -1,16 +1,22 @@
 # Builds and tests the app on every push to `staging`, then deploys it to the Railway staging environment.
+# Pull requests (including ones from forks) only build and test; they never deploy and get no secrets.
 # Needs one repository secret: RAILWAY_TOKEN, a Railway project token scoped to the insight-pitch "staging" environment.
 name: Staging
 
 on:
   push:
     branches: [staging]
+  pull_request:
   workflow_dispatch:
 
 # One deploy at a time; a newer push waits for the running one instead of cancelling it mid-deploy.
+# Each pull request has its own group, and a newer push to it cancels the older run.
 concurrency:
-  group: staging
-  cancel-in-progress: false
+  group: ${{ github.event_name == 'pull_request' && format('pr-{0}', github.event.number) || 'staging' }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+permissions:
+  contents: read
 
 jobs:
   test:
@@ -70,6 +76,7 @@ jobs:
   deploy:
     name: Deploy to Railway staging
     needs: test
+    if: github.event_name != 'pull_request'
     runs-on: ubuntu-latest
     timeout-minutes: 20
     environment:

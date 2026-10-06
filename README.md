@@ -4,6 +4,10 @@ A proposal management app for public decisions: citizens and officials draft pro
 numbered versions, discuss them, and see each proposal scored against policy "streams" by Jev
 (TypeSafe System One). Built from the Claude Design file in `design/`.
 
+Insight Pitch is open source under the [GNU AGPL v3](LICENSE): anyone can read, run and change it, and anyone who
+runs a modified version as a public service has to publish their changes too. See [CONTRIBUTING.md](CONTRIBUTING.md)
+to get involved and [SECURITY.md](SECURITY.md) to report a vulnerability.
+
 - `design/`: the Claude Design source (`Insight Pitch v2.dc.html` is the design this app follows)
 - `app/`: the Next.js 16 app (App Router, TypeScript, PostgreSQL via Drizzle)
 - `PLAN.md`: build checklist, decisions and status
@@ -29,6 +33,8 @@ npm run dev                   # http://localhost:3000
 
 Sign in as **maya.chen@insight.gov** / **insight2026** (admin). Every seeded person uses the same
 password, for example `priya.raman@insight.gov` (official) or `lena.fischer@example.org` (citizen).
+This password is public, so on any copy that other people can reach, set `SEED_ADMIN_PASSWORD` before seeding to
+give the admin account a private password.
 
 ## Scripts (in `app/`)
 
@@ -71,6 +77,8 @@ groups repeats and OpenAI (`gpt-6-luna`, set `OPENAI_MODEL` to change it) writes
 
 Pushing to the `staging` branch runs `.github/workflows/staging.yml`:
 
+Pull requests run the build and test job only; they never deploy and get no secrets.
+
 1. **Build and test**: type check, lint, and the Playwright suite against a Postgres service container. The run has
    no Jev or OpenAI keys, so specs that need them skip themselves; the visual comparison only runs locally.
 2. **Deploy**: `railway up` uploads `app/` to the `app` service in the Railway project **insight-pitch**, environment
@@ -84,6 +92,8 @@ Setup that lives outside the repo:
   check `/login`) and variables (`DATABASE_URL` → the staging Postgres, `TYPESAFE_API_KEY`, `OPENAI_API_KEY`,
   `OPENAI_MODEL`, `RAILPACK_NODE_VERSION=22`).
 - GitHub repository secret `RAILWAY_TOKEN`: a Railway **project token** for the insight-pitch **staging** environment.
+- Optional variable `SEED_ADMIN_PASSWORD`: if staging is used as a public demo, set it and reseed so the admin
+  account (Maya) gets a private password. Everyone else keeps the public sample password.
 - Deploys never reseed. The staging database was seeded once with the sample data; to reseed, run
   `railway ssh --service app --environment staging -- npx tsx scripts/seed.mts` (this replaces all staging data).
 
@@ -100,3 +110,14 @@ the interface and the content, and is saved to their account.
 - **Admin settings → Languages**: add, enable or remove languages, set the default language, turn translation on
   publish, discussion translation and machine-translation labels on or off, keep a never-translate list, and clear
   the cache.
+
+## License
+
+Copyright (C) 2026 Intrigsoft
+
+This program is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General
+Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option)
+any later version. It is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the
+implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See [LICENSE](LICENSE) for the full text.
+
+The sample people, proposals and comments come from the design and are fictional.
