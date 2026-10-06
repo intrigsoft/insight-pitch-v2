@@ -26,13 +26,14 @@ test("proposal page shows scores, body sections and version history", async ({ p
 
 test("following a proposal adds it to the Following tab", async ({ page }) => {
   await login(page);
-  await openProposal(page, TITLES.hospital);
+  // Maya isn't on the procurement team, so she follows it rather than suggesting changes.
+  await openProposal(page, TITLES.procurement);
   await page.getByRole("button", { name: "Follow proposal" }).click();
   await expect(page.getByRole("status")).toHaveText("You’ll be notified about new versions");
   await expect(page.getByRole("button", { name: "Following ✓" })).toBeVisible();
   await page.goto("/?tab=following");
   await expect(page.locator(".rows .row")).toHaveCount(2);
-  await openProposal(page, TITLES.hospital);
+  await openProposal(page, TITLES.procurement);
   await page.getByRole("button", { name: "Following ✓" }).click();
   await expect(page.getByRole("status")).toHaveText("Unfollowed");
   await expect(page.getByRole("button", { name: "Follow proposal" })).toBeVisible();
@@ -51,7 +52,7 @@ test("own published proposal with a draft offers to continue it", async ({ page 
 test("an unpublished draft is private and closed for comments", async ({ page, browser }) => {
   await login(page);
   await openProposal(page, TITLES.telemedicine);
-  await expect(page.getByText("This proposal is a draft. Only you can see it until it's published.")).toBeVisible();
+  await expect(page.getByText("This proposal is a draft. Only the team can see it until it's published.")).toBeVisible();
   await expect(page.getByText("Comments open once the proposal is published.")).toBeVisible();
   await expect(page.getByText("Nothing published yet. v1 is created when you publish.")).toBeVisible();
   await expect(page.getByRole("link", { name: "Continue draft" })).toBeVisible();

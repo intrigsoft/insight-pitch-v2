@@ -69,9 +69,20 @@ export const streamLinks = pgTable(
 
 export const proposals = pgTable("proposals", {
   id: uuid("id").primaryKey().defaultRandom(),
+  // Who started the proposal. The lead (who edits and publishes) can change hands; the author never does.
   authorId: uuid("author_id")
     .notNull()
     .references(() => users.id),
+  leadId: uuid("lead_id")
+    .notNull()
+    .references(() => users.id),
+  // Who can ask to join the team: anyone, only for an open role, or no one (invites only).
+  joinMode: text("join_mode", { enum: ["open", "roles", "closed"] }).notNull().default("roles"),
+  teamCap: integer("team_cap"),
+  // A pending offer of the lead role to a team member, which they accept or decline.
+  offerTo: uuid("offer_to").references(() => users.id, { onDelete: "set null" }),
+  offerNote: text("offer_note").notNull().default(""),
+  offerAt: timestamp("offer_at", { withTimezone: true }),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 });
@@ -91,6 +102,9 @@ export const proposalVersions = pgTable(
     // Language the version is written in; translations are made from it. Null until detected.
     language: text("language"),
     publishedAt: timestamp("published_at", { withTimezone: true }).notNull().defaultNow(),
+    // Who published it, and the team members whose merged change requests it includes.
+    byId: uuid("by_id").references(() => users.id, { onDelete: "set null" }),
+    withIds: uuid("with_ids").array().notNull().default(sql`'{}'::uuid[]`),
   },
   (t) => [unique("proposal_versions_number").on(t.proposalId, t.number)],
 );
@@ -111,6 +125,8 @@ export const proposalDrafts = pgTable("proposal_drafts", {
   // Whether the summary was generated from the body, and for which body (hashText), to flag it when the body changes.
   summaryAuto: boolean("summary_auto").notNull().default(false),
   summaryFor: text("summary_for").notNull().default(""),
+  // Team members whose change requests were merged into this draft, credited on the version it becomes.
+  contributors: uuid("contributors").array().notNull().default(sql`'{}'::uuid[]`),
   savedAt: timestamp("saved_at", { withTimezone: true }).notNull().defaultNow(),
 });
 
@@ -324,4 +340,120 @@ export const translations = pgTable(
     reviewedAt: timestamp("reviewed_at", { withTimezone: true }),
   },
   (t) => [primaryKey({ columns: [t.lang, t.hash] })],
+);
+
+/* Teams. The lead is a member too. Only the lead edits and publishes; other members suggest changes. */
+
+export const teamMembers = pgTable(
+  "team_members",
+  {
+    proposalId: uuid("proposal_id")
+      .notNull()
+      .references(() => proposals.id, { onDelete: "cascade" }),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    // The stream they joined to help with, if any.
+    streamId: text("stream_id").references(() => streams.id, { onDelete: "set null" }),
+    joinedAt: timestamp("joined_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [primaryKey({ columns: [t.proposalId, t.userId] }), index("team_members_user").on(t.userId)],
+);
+
+// Expertise the team is looking for, shown on the proposal.
+export const teamRoles = pgTable(
+  "team_roles",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    proposalId: uuid("proposal_id")
+      .notNull()
+      .references(() => proposals.id, { onDelete: "cascade" }),
+    streamId: text("stream_id")
+      .notNull()
+      .references(() => streams.id, { onDelete: "cascade" }),
+    note: text("note").notNull().default(""),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [unique("team_roles_stream").on(t.proposalId, t.streamId)],
+);
+
+// Requests to join (from the person) and invites (from the lead). One of each per person per proposal.
+export const teamRequests = pgTable(
+  "team_requests",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    proposalId: uuid("proposal_id")
+      .notNull()
+      .references(() => proposals.id, { onDelete: "cascade" }),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    streamId: text("stream_id").references(() => streams.id, { onDelete: "set null" }),
+    note: text("note").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [unique("team_requests_user").on(t.proposalId, t.userId), index("team_requests_by_user").on(t.userId)],
+);
+
+export const teamInvites = pgTable(
+  "team_invites",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    proposalId: uuid("proposal_id")
+      .notNull()
+      .references(() => proposals.id, { onDelete: "cascade" }),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    fromId: uuid("from_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    streamId: text("stream_id").references(() => streams.id, { onDelete: "set null" }),
+    note: text("note").notNull().default(""),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [unique("team_invites_user").on(t.proposalId, t.userId)],
+);
+
+// People who can't ask to join (blocked), and when someone's last request was declined (they wait 30 days).
+export const teamBlocks = pgTable(
+  "team_blocks",
+  {
+    proposalId: uuid("proposal_id")
+      .notNull()
+      .references(() => proposals.id, { onDelete: "cascade" }),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    blocked: boolean("blocked").notNull().default(false),
+    declinedAt: timestamp("declined_at", { withTimezone: true }),
+  },
+  (t) => [primaryKey({ columns: [t.proposalId, t.userId] })],
+);
+
+// Changes a team member suggests, based on a published version. The lead accepts or rejects each change,
+// and accepted ones go into the lead's draft.
+export const changeRequests = pgTable(
+  "change_requests",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    proposalId: uuid("proposal_id")
+      .notNull()
+      .references(() => proposals.id, { onDelete: "cascade" }),
+    authorId: uuid("author_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    baseVersion: integer("base_version").notNull(),
+    title: text("title").notNull(),
+    summary: text("summary").notNull(),
+    body: text("body").notNull(),
+    note: text("note").notNull(),
+    status: text("status", { enum: ["open", "merged", "returned", "closed", "withdrawn"] }).notNull().default("open"),
+    // After merging: how many of the changes were accepted, e.g. "2 of 3".
+    accepted: integer("accepted"),
+    total: integer("total"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index("change_requests_proposal").on(t.proposalId)],
 );

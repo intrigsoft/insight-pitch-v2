@@ -16,6 +16,7 @@ import {
   proposalVersions,
   proposals,
   streams,
+  teamMembers,
 } from "@/db/schema";
 import { requireUser, type CurrentUser } from "@/lib/auth";
 import { getSettings } from "@/lib/settings";
@@ -35,10 +36,11 @@ const tr = async () => (await getI18n()).t;
 
 type Result<T = object> = ({ ok: true } & T) | { ok: false; error: string };
 
+/** The proposal, if the user leads it: only the lead edits the draft and publishes. */
 async function loadOwnProposal(id: string, user: CurrentUser) {
   const [p] = await db.select().from(proposals).where(eq(proposals.id, id)).limit(1);
   if (!p) return null;
-  return p.authorId === user.id ? p : null;
+  return p.leadId === user.id ? p : null;
 }
 
 async function isPublished(id: string) {
@@ -145,17 +147,17 @@ export async function voteInsight(insightId: string): Promise<Result<{ voted: bo
   return { ok: true, voted: !existing };
 }
 
-/** Only the proposal's author can mark a clarification as answered. */
+/** Only the proposal's lead can mark a clarification as answered. */
 export async function markAnswered(insightId: string, answered: boolean): Promise<Result> {
   const user = await requireUser();
   const [ins] = await db
-    .select({ kind: insights.kind, authorId: proposals.authorId })
+    .select({ kind: insights.kind, leadId: proposals.leadId })
     .from(insights)
     .innerJoin(proposals, eq(proposals.id, insights.proposalId))
     .where(eq(insights.id, insightId))
     .limit(1);
   if (!ins) return { ok: false, error: (await tr())("err.insightGone") };
-  if (ins.authorId !== user.id) return { ok: false, error: (await tr())("err.onlyAuthorAnswers") };
+  if (ins.leadId !== user.id) return { ok: false, error: (await tr())("err.onlyAuthorAnswers") };
   if (ins.kind !== "clarification") return { ok: false, error: (await tr())("err.onlyClarifications") };
   await db.update(insights).set({ answered }).where(eq(insights.id, insightId));
   revalidatePath("/", "layout");
@@ -236,7 +238,8 @@ export async function saveDraft(input: EditorInput): Promise<Result<{ id: string
     if (!(await loadOwnProposal(id, user))) return { ok: false, error: (await tr())("ed.errOwn") };
     await db.update(proposals).set({ updatedAt: now }).where(eq(proposals.id, id));
   } else {
-    [{ id }] = await db.insert(proposals).values({ authorId: user.id, createdAt: now, updatedAt: now }).returning({ id: proposals.id });
+    [{ id }] = await db.insert(proposals).values({ authorId: user.id, leadId: user.id, createdAt: now, updatedAt: now }).returning({ id: proposals.id });
+    await db.insert(teamMembers).values({ proposalId: id, userId: user.id, joinedAt: now });
   }
   const draft = { title, summary, body: input.body, note: input.note.trim(), noteAuto: input.noteAuto, noteFor: input.noteFor, summaryAuto: input.summaryAuto, summaryFor: input.summaryFor, savedAt: now };
   await db.insert(proposalDrafts).values({ proposalId: id!, ...draft }).onConflictDoUpdate({ target: proposalDrafts.proposalId, set: draft });
@@ -311,11 +314,14 @@ export async function publish(input: EditorInput): Promise<Result<{ id: string; 
   const now = new Date();
   await db.transaction(async (tx) => {
     if (!id) {
-      [{ id }] = await tx.insert(proposals).values({ authorId: user.id, createdAt: now, updatedAt: now }).returning({ id: proposals.id });
+      [{ id }] = await tx.insert(proposals).values({ authorId: user.id, leadId: user.id, createdAt: now, updatedAt: now }).returning({ id: proposals.id });
+      await tx.insert(teamMembers).values({ proposalId: id!, userId: user.id, joinedAt: now });
     } else {
       await tx.update(proposals).set({ updatedAt: now }).where(eq(proposals.id, id));
     }
-    await tx.insert(proposalVersions).values({ proposalId: id!, number: next, title, summary, body, note, language, publishedAt: now });
+    // Credit the team members whose change requests went into this version.
+    const withIds = (draft?.contributors ?? []).filter((x) => x !== user.id);
+    await tx.insert(proposalVersions).values({ proposalId: id!, number: next, title, summary, body, note, language, publishedAt: now, byId: user.id, withIds });
     await tx.delete(proposalDrafts).where(eq(proposalDrafts.proposalId, id!));
   });
   if (detected) await writeScores(id!, detected.scores);

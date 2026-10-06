@@ -7,6 +7,7 @@ import { sortedScores } from "@/lib/proposal-view";
 import { editorLanguageProps } from "@/lib/editor-props";
 import { getI18n } from "@/i18n/server";
 import { Editor } from "@/components/Editor";
+import { versionCredit } from "@/lib/credit";
 
 export async function generateMetadata() {
   const { t } = await getI18n();
@@ -18,7 +19,8 @@ export default async function EditProposalPage({ params }: PageProps<"/proposals
   const user = await requireUser();
   const [p, streams, settings, i18n] = await Promise.all([getProposalDetail(id, user), getStreams(), getSettings(), getI18n()]);
   if (!p) notFound();
-  if (p.author.id !== user.id) redirect(`/proposals/${id}`);
+  // Only the lead edits; other team members suggest changes instead.
+  if (p.role !== "lead") redirect(p.role === "member" && p.versions.length ? `/proposals/${id}/suggest` : `/proposals/${id}`);
   const latest = p.versions.at(-1) ?? null;
   const d = p.draft;
   const src = d ?? latest!;
@@ -31,7 +33,7 @@ export default async function EditProposalPage({ params }: PageProps<"/proposals
       initial={{ title: src.title, summary: src.summary, body: src.body, note: d?.note ?? "", noteAuto: d?.noteAuto ?? true, noteFor: d?.noteFor ?? "", summaryAuto: d?.summaryAuto ?? false, summaryFor: d?.summaryFor ?? "" }}
       latest={latest && { number: latest.number, title: latest.title, summary: latest.summary, body: latest.body }}
       savedLabel={d ? savedAgo(d.savedAt, i18n) : null}
-      history={p.versions.map((v) => ({ number: v.number, note: v.note, date: shortDate(v.publishedAt, i18n.locale), by: p.author.name }))}
+      history={p.versions.map((v) => ({ number: v.number, note: v.note, date: shortDate(v.publishedAt, i18n.locale), by: versionCredit(v, p.names, i18n.t, i18n.locale, p.author.name) }))}
       scores={sortedScores(p.scores, lp.streams).map((s) => ({ streamId: s.streamId, name: s.stream.name, color: s.stream.color, score: s.score }))}
       meName={user.name}
       translateInto={lp.translateInto}

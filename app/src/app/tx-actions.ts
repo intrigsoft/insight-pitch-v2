@@ -39,8 +39,8 @@ export async function markTranslationsReviewed(proposalId: string, lang: string,
   const user = await getCurrentUser();
   const { t } = await getI18n();
   if (!user) return { ok: false, error: t("err.cantReview") };
-  const [p] = await db.select({ authorId: proposals.authorId }).from(proposals).where(eq(proposals.id, proposalId)).limit(1);
-  if (!p || (user.role === "citizen" && p.authorId !== user.id)) return { ok: false, error: t("err.cantReview") };
+  const [p] = await db.select({ leadId: proposals.leadId }).from(proposals).where(eq(proposals.id, proposalId)).limit(1);
+  if (!p || (user.role === "citizen" && p.leadId !== user.id)) return { ok: false, error: t("err.cantReview") };
   if (!texts.length || texts.length > MAX_TEXTS) return { ok: false, error: t("err.generic") };
   await db
     .update(translations)

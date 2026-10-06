@@ -262,7 +262,7 @@ test("a new version: the save dialog lists changes and describes them", async ({
   await page.getByRole("button", { name: "Save draft" }).click();
   const dialog = page.getByRole("dialog", { name: "Save draft" });
   await expect(dialog).toContainText("Changes since v1");
-  await expect(dialog).toContainText("New section: Funding");
+  await expect(dialog).toContainText("New section: Measuring success");
   await expect(dialog).toContainText("Table added");
   await expect(dialog).toContainText("Attachment added");
   const description = dialog.getByRole("textbox");
@@ -278,7 +278,7 @@ test("a new version: the save dialog lists changes and describes them", async ({
   const history = page.getByRole("navigation", { name: "Version history" });
   await expect(history.getByRole("link")).toHaveCount(2);
   await expect(history.getByRole("link").first()).toContainText("Added funding, success measures");
-  await expect(history.getByRole("link").first()).toContainText("New section: Funding");
+  await expect(history.getByRole("link").first()).toContainText("New section: Measuring success");
   await expect(page.locator(".prose .body-file")).toContainText("added in v2");
 });
 

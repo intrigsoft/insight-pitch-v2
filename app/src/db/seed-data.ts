@@ -58,8 +58,14 @@ const P2why = "## Why\n\nCitizens currently need a formal information request to
 const P2v1 = P2why + "\n\n## Proposal\n\nPublish every signed contract above 5 million, with amendments and the winning bid, in a searchable online register within 30 days of signing.";
 const P2v2 = P2why + "\n\n## Proposal\n\nPublish every signed contract above 1 million, with amendments and the winning bid, in a searchable online register within 30 days of signing.\n\n## Redaction\n\nPersonal data and genuinely security-sensitive clauses may be redacted. Each redaction must cite its legal basis, and the redaction log is itself public.";
 const P3v1 = "## Proposal\n\nProvide a free daily meal to every primary school student in the district, starting with the 40 schools with the highest absence rates.\n\n## Local sourcing\n\nAt least 40% of produce would be bought from farms within the district through simplified, published tenders.\n\n## Expected outcomes\n\nHigher attendance, better nutrition indicators in annual health checks, and a stable buyer for small farms.";
-const P5v1 = "## The problem\n\nMore than half of people appearing in district courts for civil matters have no legal representation. Many cannot afford a lawyer and don't know that free help exists.\n\n## Proposal\n\nOpen a free legal aid desk in every district court, staffed two days a week by volunteer lawyers and supervised law students.";
-const P5draft = P5v1 + "\n\n## Funding\n\nThe bar association has offered volunteer hours. The remaining cost, mainly coordination staff and desk space, is about **600,000 a year**.\n\n| Item | Per year |\n| Coordinator (1 full-time) | 380,000 |\n| Desk space and equipment | 140,000 |\n| Training for law students | 80,000 |\n\n## Measuring success\n\n- Share of civil cases with some form of legal advice\n- Number of cases resolved before a full hearing" + `\n\n::file ${LETTER} | Bar association letter of support.pdf | 25 KB`;
+const P5prob = "## The problem\n\nMore than half of people appearing in district courts for civil matters have no legal representation. Many cannot afford a lawyer and don't know that free help exists.";
+const P5fund = "## Funding\n\nThe bar association has offered volunteer hours. The remaining cost, mainly coordination staff and desk space, is about **600,000 a year**.";
+const P5v1 = P5prob + "\n\n## Proposal\n\nOpen a free legal aid desk in every district court, staffed two days a week by volunteer lawyers and supervised law students.\n\n" + P5fund;
+const P5draft = P5prob + "\n\n## Proposal\n\nOpen a free legal aid desk in every district court, staffed three days a week by volunteer lawyers and supervised law students, with one full-time coordinator for the programme.\n\n" + P5fund + "\n\n| Item | Per year |\n| Coordinator (1 full-time) | 380,000 |\n| Desk space and equipment | 140,000 |\n| Training for law students | 80,000 |\n\n## Measuring success\n\n- Share of civil cases with some form of legal advice\n- Number of cases resolved before a full hearing" + `\n\n::file ${LETTER} | Bar association letter of support.pdf | 25 KB`;
+// Change requests from the design: Daniel and Sam on the legal aid proposal (Sam's overlaps with Maya's draft), Maya on the hospital.
+const P5dan = P5v1.replace("Many cannot afford a lawyer and don't know that free help exists.", "Many cannot afford a lawyer, and most don't know that free help exists.\n\nMost of these cases are family, tenancy and debt disputes, where the other side often has a lawyer. The desks would advise on all three.");
+const P5sam = P5v1.replace("staffed two days a week by volunteer lawyers and supervised law students.", "staffed two days a week by volunteer lawyers and final-year law students supervised by a practising lawyer.");
+const P1maya = P1v3.replace("alongside Phase 1.", "alongside Phase 1 and maintain it afterwards from its regular maintenance budget.");
 const P4v1 = "## Proposal\n\nCreate a signed 4 km walking trail linking the old town's twelve listed buildings, with a small visitor centre in the former customs house.";
 const P4v2 = P4v1 + "\n\n## Why now\n\nVisitor numbers have grown 30% in three years, but most visitors stay less than half a day. A trail gives them reasons to stay longer and spreads spending beyond the main square.\n\n## Protecting the site\n\nThe trail uses existing streets. Coach parking moves to the edge of the old town, with a shuttle to the visitor centre.";
 const P7v1 = "## Proposal\n\nRun a 12-month pilot replacing diesel buses with 14 electric buses on routes 4 and 11, the two busiest city routes.\n\n## Costs\n\nThe buses are leased, so capital cost is limited to two depot charging stations. Fuel and maintenance savings are expected to cover about 70% of the lease.\n\n## What we'd measure\n\nReliability, operating cost per kilometre, air quality on both routes, and passenger satisfaction.";
@@ -232,3 +238,35 @@ export function ageToMs(age: Age): number {
   const unit = { m: 60_000, h: 3_600_000, d: 86_400_000, w: 7 * 86_400_000 }[m[2] as "m" | "h" | "d" | "w"];
   return n * unit;
 }
+
+/* Teams, from the v9 design. Members: [person, stream they help with, joined]. Requests and invites: [person, stream, note, age]. */
+type SeedTeam = {
+  members?: [PersonKey, string | null, Age][];
+  mode?: "open" | "roles" | "closed";
+  cap?: number;
+  roles?: [string, string][];
+  requests?: [PersonKey, string | null, string, Age][];
+  invites?: [PersonKey, string | null, string, Age][];
+  declined?: [PersonKey, Age][];
+  offer?: { to: PersonKey; note: string; age: Age };
+};
+export const TEAMS: Record<string, SeedTeam> = {
+  p1: { members: [["ava", "finance", "14d"], ["maya", null, "10d"]], roles: [["transport", "Plan the access road and the bus link to the regional route"]], offer: { to: "maya", note: "I move to the national planning office in November. You know the funding side best.", age: "1d" } },
+  p2: { members: [["lena", "it", "13d"]], mode: "open" },
+  p3: { mode: "closed" },
+  p8: { roles: [["law", "Draft the dispute rules for contested titles"], ["finance", "Estimate the three-year cost"]], requests: [["maya", "law", "I drafted the legal aid proposal and work with the district courts on civil cases.", "2d"]] },
+  p5: {
+    members: [["daniel", "law", "10d"], ["sam", null, "9d"]], cap: 6,
+    roles: [["finance", "Check the coordinator and desk costs, and find a budget line"]],
+    requests: [["ava", "finance", "Forty years costing public buildings. Happy to check the coordinator and desk space costs line by line.", "5h"], ["kai", "finance", "add me pls want to be on this", "1h"]],
+    invites: [["jun", "it", "Could you advise on a simple case log the desks could share?", "1d"]],
+  },
+  p4: { roles: [["transport", "Plan coach parking and the shuttle"]], declined: [["maya", "12d"]] },
+  p7: { roles: [["finance", "Review the lease terms and the savings estimate"]], invites: [["maya", "finance", "Could you look at the lease and procurement terms before v2?", "3h"]] },
+};
+
+export const CHANGE_REQUESTS: { proposal: string; author: PersonKey; base: number; body: string; note: string; age: Age }[] = [
+  { proposal: "p5", author: "daniel", base: 1, body: P5dan, note: "Named the case types the desks would cover", age: "2d" },
+  { proposal: "p5", author: "sam", base: 1, body: P5sam, note: "Law students to be supervised by a practising lawyer", age: "20h" },
+  { proposal: "p1", author: "maya", base: 3, body: P1maya, note: "Named who maintains the access road after construction", age: "1d" },
+];

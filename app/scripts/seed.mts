@@ -4,7 +4,7 @@ import bcrypt from "bcryptjs";
 import { drizzle } from "drizzle-orm/postgres-js";
 import postgres from "postgres";
 import * as s from "../src/db/schema";
-import { COMMENT_ANALYSIS, DEFAULT_SETTINGS, UPLOADS, INSIGHTS, PEOPLE, PROPOSALS, SEED_LANGUAGES, SEED_PASSWORD, STREAMS, ageToMs } from "../src/db/seed-data";
+import { CHANGE_REQUESTS, COMMENT_ANALYSIS, TEAMS, DEFAULT_SETTINGS, UPLOADS, INSIGHTS, PEOPLE, PROPOSALS, SEED_LANGUAGES, SEED_PASSWORD, STREAMS, ageToMs } from "../src/db/seed-data";
 import { catalogEntry } from "../src/lib/languages";
 
 const sql = postgres(process.env.DATABASE_URL!, { max: 1, onnotice: () => {} });
@@ -13,7 +13,7 @@ const now = Date.now();
 const ago = (age: string) => new Date(now - ageToMs(age));
 
 await sql`truncate users, sessions, user_follows, streams, stream_links, proposals, proposal_versions, proposal_drafts, uploads,
-  proposal_streams, follows, comments, comment_likes, comment_flags, insights, insight_sources, insight_votes,
+  proposal_streams, follows, comments, team_members, team_roles, team_requests, team_invites, team_blocks, change_requests, comment_likes, comment_flags, insights, insight_sources, insight_votes,
   settings, languages, translations restart identity cascade`;
 
 await db.insert(s.languages).values(SEED_LANGUAGES.map((code, i) => {
@@ -56,9 +56,28 @@ const analysis = (text: string) => {
 
 for (const p of PROPOSALS) {
   const oldest = p.versions[0]?.age ?? p.draft?.saved ?? p.updated;
-  const [row] = await db.insert(s.proposals).values({ authorId: uid[p.author], createdAt: ago(oldest), updatedAt: ago(p.updated) }).returning({ id: s.proposals.id });
+  const team = TEAMS[p.key] ?? {};
+  const [row] = await db
+    .insert(s.proposals)
+    .values({
+      authorId: uid[p.author], leadId: uid[p.author], createdAt: ago(oldest), updatedAt: ago(p.updated), joinMode: team.mode ?? "roles", teamCap: team.cap ?? null,
+      ...(team.offer ? { offerTo: uid[team.offer.to], offerNote: team.offer.note, offerAt: ago(team.offer.age) } : {}),
+    })
+    .returning({ id: s.proposals.id });
   for (const v of p.versions) {
-    await db.insert(s.proposalVersions).values({ proposalId: row.id, number: v.n, title: v.title, summary: v.summary, body: v.body, note: v.note, publishedAt: ago(v.age), language: "en" });
+    await db.insert(s.proposalVersions).values({ proposalId: row.id, number: v.n, title: v.title, summary: v.summary, body: v.body, note: v.note, publishedAt: ago(v.age), language: "en", byId: uid[p.author] });
+  }
+  await db.insert(s.teamMembers).values([
+    { proposalId: row.id, userId: uid[p.author], joinedAt: ago(oldest) },
+    ...(team.members ?? []).map(([k, streamId, age]) => ({ proposalId: row.id, userId: uid[k], streamId, joinedAt: ago(age) })),
+  ]);
+  if (team.roles?.length) await db.insert(s.teamRoles).values(team.roles.map(([streamId, note]) => ({ proposalId: row.id, streamId, note })));
+  if (team.requests?.length) await db.insert(s.teamRequests).values(team.requests.map(([k, streamId, note, age]) => ({ proposalId: row.id, userId: uid[k], streamId, note, createdAt: ago(age) })));
+  if (team.invites?.length) await db.insert(s.teamInvites).values(team.invites.map(([k, streamId, note, age]) => ({ proposalId: row.id, userId: uid[k], fromId: uid[p.author], streamId, note, createdAt: ago(age) })));
+  if (team.declined?.length) await db.insert(s.teamBlocks).values(team.declined.map(([k, age]) => ({ proposalId: row.id, userId: uid[k], declinedAt: ago(age) })));
+  for (const cr of CHANGE_REQUESTS.filter((c) => c.proposal === p.key)) {
+    const base = p.versions.find((v) => v.n === cr.base)!;
+    await db.insert(s.changeRequests).values({ proposalId: row.id, authorId: uid[cr.author], baseVersion: cr.base, title: base.title, summary: base.summary, body: cr.body, note: cr.note, createdAt: ago(cr.age), updatedAt: ago(cr.age) });
   }
   if (p.draft) await db.insert(s.proposalDrafts).values({ proposalId: row.id, title: p.draft.title, summary: p.draft.summary, body: p.draft.body, savedAt: ago(p.draft.saved) });
   await db.insert(s.proposalStreams).values(Object.entries(p.scores).map(([streamId, score]) => ({ proposalId: row.id, streamId, score, authorScore: score })));

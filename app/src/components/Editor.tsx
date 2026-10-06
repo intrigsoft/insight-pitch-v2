@@ -11,6 +11,7 @@ import { changesOf, contentSig, fmtSize, hashText, MAX_UPLOAD_BYTES, parseBody, 
 import { changeLabel } from "@/lib/change-label";
 import { formatScore, scaleSuffix, type Scale } from "@/lib/scale";
 import { describeChanges, publish, saveDraft, writeSummary } from "@/app/(app)/actions";
+import { describeChangeRequest, submitChangeRequest } from "@/app/(app)/team-actions";
 import { bodyToHtml, inlineHtml, islandHtml, serialize, videoHint, type IslandLabels } from "./editor/dom";
 
 type Content = { title: string; summary: string; body: string };
@@ -29,10 +30,16 @@ export type EditorProps = {
   scoredBy: "author" | "reviewers" | "both";
   /** Native names of the languages a published version is translated into, if translating on publish. */
   translateInto: string[];
+  /**
+   * Suggesting changes as a team member: the editor starts from version `base` (in `latest`), there's no draft,
+   * and submitting sends a change request to the lead. `crId` when updating a request that was sent back.
+   */
+  cr?: { base: number; crId: string | null; lead: string; note: string };
 };
 
 type Sel = { bt: string; b: boolean; i: boolean; a: boolean; tbl: boolean; bub: { x: number; y: number; mode: "fmt" | "link"; href?: string } | null };
 type SaveDialog = { note: string; busy: boolean; edited: boolean; changes: Change[]; sig: string };
+type CrDialog = { note: string; busy: boolean; edited: boolean; changes: string[]; sig: string; cur: Content };
 
 const SLASH = [
   ["p", "ed.slashText", "ed.slashTextDesc", "paragraph text", "Aa", "sans"],
@@ -74,6 +81,8 @@ export function Editor(props: EditorProps) {
   const [link, setLink] = useState<{ x: number; y: number; url: string; hadLink: boolean } | null>(null);
   const [slash, setSlash] = useState<{ x: number; y: number; q: string; idx: number } | null>(null);
   const [dialog, setDialog] = useState<SaveDialog | null>(null);
+  const [crDialog, setCrDialog] = useState<CrDialog | null>(null);
+  const cr = props.cr;
   // The summary can be written from the body; remember whether it was, and for which body, to flag it when it goes stale.
   const [sumMeta, setSumMeta] = useState({ auto: props.initial.summaryAuto, sig: props.initial.summaryFor, busy: false });
   const [bodyNow, setBodyNow] = useState(props.initial.body);
@@ -658,7 +667,35 @@ export function Editor(props: EditorProps) {
     });
   };
 
+  /* Change requests */
+
+  const openCrSubmit = () => {
+    if (!cr || !id) return;
+    const cur = content();
+    if (!cur.title) return setError(t("cd.errTitle"));
+    const changes = L ? changesOf(L, cur) : [];
+    if (!changes.length) return setError(t("cd.errNothing", { version: `v${cr.base}` }));
+    const sig = contentSig(cur);
+    const pre = cr.note.trim();
+    setCrDialog({ note: pre, busy: !pre, edited: Boolean(pre), changes: changes.map((c) => changeLabel(c, t, tn)), sig, cur });
+    describeChangeRequest({ proposalId: id, base: cr.base, ...cur })
+      .catch(() => null)
+      .then((r) => setCrDialog((d) => (d && d.sig === sig ? { ...d, changes: r?.ok ? r.changes : d.changes, note: d.edited || !r?.ok ? d.note : r.note, busy: false } : d)));
+  };
+  const confirmCr = () => {
+    if (!cr || !id || !crDialog || crDialog.busy) return;
+    const d = crDialog;
+    start(async () => {
+      const r = await submitChangeRequest({ proposalId: id, crId: cr.crId, base: cr.base, ...d.cur, note: d.note });
+      if (!r.ok) { setCrDialog(null); return setError(r.error); }
+      setCrDialog(null);
+      if (r.message) toast(r.message);
+      router.push(`/proposals/${id}`);
+    });
+  };
+
   const onPublish = async () => {
+    if (cr) return openCrSubmit();
     let cur = content();
     if (!cur.summary && cur.title && hasBody(cur.body)) cur = { ...cur, summary: await genSummary() };
     const missingAlt = parseBody(cur.body).some((b) => b.type === "image" && !b.alt.trim());
@@ -681,7 +718,7 @@ export function Editor(props: EditorProps) {
   const sumNote = sumEmpty
     ? hasBody(bodyNow) ? t("ed.sumEmptyNote") : t("ed.sumWriteFirst")
     : sumStale ? t("ed.sumStale") : sumMeta.auto ? t("ed.sumAutoNote") : t("ed.sumOwnNote");
-  const statusText = !id ? t("ed.statusNew") : L ? t("ed.statusPublished", { version: `v${L.number}` }) + (saved ? " · " + t("ed.statusDraftOf", { version: vn }) : "") : t("ed.statusDraft");
+  const statusText = cr ? t("ed.crStatus", { version: `v${cr.base}`, name: cr.lead }) : !id ? t("ed.statusNew") : L ? t("ed.statusPublished", { version: `v${L.number}` }) + (saved ? " · " + t("ed.statusDraftOf", { version: vn }) : "") : t("ed.statusDraft");
   const md = (fn: () => void) => (e: React.MouseEvent) => { e.preventDefault(); fn(); };
   const on = (x?: boolean) => (x ? " on" : "");
   const S = sel ?? ({} as Partial<Sel>);
@@ -692,13 +729,13 @@ export function Editor(props: EditorProps) {
   return (
     <main className="edit-main" data-screen-label="Editor">
       <div className="edit-bar">
-        <Link href={id ? `/proposals/${id}` : "/"} className="back-link"><BackIcon />{id ? t("ed.back") : t("ed.cancel")}</Link>
+        <Link href={id ? `/proposals/${id}` : "/"} className="back-link"><BackIcon />{cr ? t("rv.back") : id ? t("ed.back") : t("ed.cancel")}</Link>
         <span className="sep">/</span>
-        <span className="heading">{!id ? t("ed.newProposal") : L ? t("ed.editingVersion", { version: vn }) : t("ed.editingDraft")}</span>
+        <span className="heading">{cr ? t("ed.crHeading", { version: `v${cr.base}` }) : !id ? t("ed.newProposal") : L ? t("ed.editingVersion", { version: vn }) : t("ed.editingDraft")}</span>
         <div className="grow" />
-        {saved ? <span className="saved">{t("ed.savedAt", { when: saved })}</span> : null}
-        <button className="btn-secondary" onClick={openSave} disabled={pending}>{t("ed.saveDraft")}</button>
-        <button className="btn-primary" onClick={onPublish} disabled={pending}>{pending ? t("ed.working") : L ? t("ed.publishVersion", { version: vn }) : t("ed.publish")}</button>
+        {saved && !cr ? <span className="saved">{t("ed.savedAt", { when: saved })}</span> : null}
+        {!cr ? <button className="btn-secondary" onClick={openSave} disabled={pending}>{t("ed.saveDraft")}</button> : null}
+        <button className="btn-primary" onClick={onPublish} disabled={pending}>{pending ? t("ed.working") : cr ? t("ed.submitReview") : L ? t("ed.publishVersion", { version: vn }) : t("ed.publish")}</button>
       </div>
       <div className="edit-cols">
         <div className="edit-paper">
@@ -840,7 +877,7 @@ export function Editor(props: EditorProps) {
         <aside className="edit-aside">
           <div className="card status-card">
             <div className="stack"><span className="eyebrow">{t("ed.status")}</span><span className="now">{statusText}</span></div>
-            {props.translateInto.length ? (
+            {props.translateInto.length && !cr ? (
               <div className="tx-hint"><Globe size={14} /><span>{t("ed.txHint", { langs: props.translateInto.join(", ") })}</span></div>
             ) : null}
             {error ? <div className="error-text" role="alert">{error}</div> : null}
@@ -850,8 +887,17 @@ export function Editor(props: EditorProps) {
             <div className="hrow draft">
               <span className="vdot" />
               <span className="vtext">
-                <span className="vhead"><b>{t("ed.draftLabel")}</b><span>{saved ? t("ed.draftSavedMeta", { when: saved, name: props.meName }) : t("ed.draftNotSaved", { name: props.meName })}</span></span>
-                <span className={`vnote${draftNote ? "" : " muted"}`}>{draftNote || (saved ? t("ed.draftNoNote") : t("ed.draftNoteHint"))}</span>
+                {cr ? (
+                  <>
+                    <span className="vhead"><b>{t("ed.yourChanges")}</b><span>{t("ed.notSubmitted", { name: props.meName })}</span></span>
+                    <span className="vnote">{t("ed.sentAs", { name: cr.lead })}</span>
+                  </>
+                ) : (
+                  <>
+                    <span className="vhead"><b>{t("ed.draftLabel")}</b><span>{saved ? t("ed.draftSavedMeta", { when: saved, name: props.meName }) : t("ed.draftNotSaved", { name: props.meName })}</span></span>
+                    <span className={`vnote${draftNote ? "" : " muted"}`}>{draftNote || (saved ? t("ed.draftNoNote") : t("ed.draftNoteHint"))}</span>
+                  </>
+                )}
               </span>
             </div>
             {[...props.history].reverse().map((h) => (
@@ -916,6 +962,37 @@ export function Editor(props: EditorProps) {
             <div className="dlg-foot">
               <button className="btn-secondary" onClick={() => setDialog(null)}>{t("ed.cancel")}</button>
               <button className="btn-primary" onClick={confirmSave} disabled={dialog.busy}>{t("sv.title")}</button>
+            </div>
+          </div>
+        </>
+      ) : null}
+
+      {crDialog && cr ? (
+        <>
+          <div className="dlg-scrim" onClick={() => setCrDialog(null)} />
+          <div role="dialog" aria-modal="true" aria-label={t("cd.submit")} className="save-dlg">
+            <div className="dlg-head">
+              <span className="eyebrow">{t("cd.kicker", { version: `v${cr.base}` })}</span>
+              <h2>{t("cd.title")}</h2>
+            </div>
+            <div className="dlg-body">
+              <div className="stack">
+                <span className="lbl">{t("cd.changesSince", { version: `v${cr.base}` })}</span>
+                <ul className="chg-list">{crDialog.changes.map((c, i) => <li key={i}><span className="dot" />{c}</li>)}</ul>
+              </div>
+              <label className="stack">
+                <span className="lbl">{t("cd.description")}</span>
+                {crDialog.busy ? (
+                  <div className="writing"><span className="spinner" aria-hidden="true" />{t("cd.writing")}</div>
+                ) : (
+                  <textarea value={crDialog.note} onChange={(e) => setCrDialog({ ...crDialog, note: e.target.value, edited: true })} rows={2} placeholder={t("cd.placeholder")} />
+                )}
+                <span className="hint">{t("cd.hint", { name: cr.lead })}</span>
+              </label>
+            </div>
+            <div className="dlg-foot">
+              <button className="btn-secondary" onClick={() => setCrDialog(null)}>{t("ed.cancel")}</button>
+              <button className="btn-primary" onClick={confirmCr} disabled={crDialog.busy || pending}>{t("cd.submit")}</button>
             </div>
           </div>
         </>

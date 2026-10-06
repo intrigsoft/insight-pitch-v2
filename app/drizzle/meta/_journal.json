@@ -71,6 +71,20 @@
       "when": 1791204888939,
       "tag": "0009_insight_relevance",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1791254998599,
+      "tag": "0010_teams",
+      "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1791257229837,
+      "tag": "0011_sample_teams",
+      "breakpoints": true
     }
   ]
 }

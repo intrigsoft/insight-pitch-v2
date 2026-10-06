@@ -11,6 +11,7 @@ import { sortedScores } from "@/lib/proposal-view";
 import { contentTranslator } from "@/lib/content-tx";
 import { bodyTexts, changesOf, parseBody, TEXT_ONLY_COOKIE } from "@/lib/body";
 import { changeLabel } from "@/lib/change-label";
+import { versionCredit } from "@/lib/credit";
 import { cookies } from "next/headers";
 import { ProposalBody } from "@/components/ProposalBody";
 import { TextOnlyButton, TextOnlyProvider } from "./Media";
@@ -22,6 +23,8 @@ import { Discussion } from "./Discussion";
 import { FollowButton } from "./FollowButton";
 import { ProposalLangMenu } from "./ProposalLangMenu";
 import { TranslationBanner, type BannerProps } from "./TranslationBanner";
+import { TeamCard } from "./Team";
+import { buildChangeRequests, buildTeamView } from "./team-view";
 
 export async function generateMetadata({ params }: PageProps<"/proposals/[id]">) {
   const user = await requireUser();
@@ -46,7 +49,8 @@ export default async function ProposalPage({ params, searchParams }: PageProps<"
   const pinned = Number.isInteger(requested) ? p.versions.find((v) => v.number === requested) ?? null : null;
   const shown = pinned ?? latest ?? p.draft!;
   const isOld = Boolean(pinned && latest && pinned.number !== latest.number);
-  const mine = p.author.id === user.id;
+  const mine = p.role === "lead";
+  const contrib = p.role === "member";
   const sfx = scaleSuffix(settings.scale);
 
   // Reading language: the per-proposal choice (?lang=) if it's enabled, else the reader's language.
@@ -77,7 +81,8 @@ export default async function ProposalPage({ params, searchParams }: PageProps<"
       (p.versions.length > 1 ? " · " + t("view.metaFirst", { date: shortDate(p.versions[0].publishedAt, locale) }) : "")
     : t("view.metaDraft", { when: savedAgo(p.draft!.savedAt, i18n) });
   const editLabel = p.draft ? t("view.continueDraft") : latest ? t("view.editNewVersion") : t("view.editDraft");
-  const participants = [p.author.name, ...p.comments.flatMap((c) => [c.author.name, ...c.replies.map((r) => r.author.name)])];
+  const [team, crs] = await Promise.all([buildTeamView(p, user, streams, settings.scale, i18n, streamName), buildChangeRequests(p, user, i18n)]);
+  const participants = [...team.members.map((m) => m.name.replace(/ \(.*\)$/, "")), ...p.comments.flatMap((c) => [c.author.name, ...c.replies.map((r) => r.author.name)])];
 
   // Translation banner, worked out here and rendered by a client component that also handles failure and retry.
   const langName = (code: string) => allLangs.find((l) => l.code === code)?.native ?? code;
@@ -139,6 +144,7 @@ export default async function ProposalPage({ params, searchParams }: PageProps<"
   // Version notes and stream names are filled in quietly, without the banner.
   const otherMissing = tx.missing.filter((m) => !proposalTexts.includes(m));
   const textLang = translating ? viewLang : srcLang;
+  const credit = (v: (typeof p.versions)[number]) => versionCredit(v, p.names, t, locale);
   const changes = (v: (typeof p.versions)[number]) => {
     const i = p.versions.indexOf(v);
     return i > 0 ? changesOf(p.versions[i - 1], v) : [];
@@ -239,12 +245,31 @@ export default async function ProposalPage({ params, searchParams }: PageProps<"
             <div className="status-line">
               {latest ? `${tn("view.versions", p.versions.length)} · ${t("view.lastPublished", { date: shortDate(latest.publishedAt, locale) })}` : t("view.notPublishedYet")}
             </div>
-            {mine ? (
-              <Link href={`/proposals/${p.id}/edit`} className="btn-primary btn-block">{editLabel}</Link>
-            ) : (
-              <FollowButton proposalId={p.id} following={p.following} />
-            )}
+            {mine ? <Link href={`/proposals/${p.id}/edit`} className="btn-primary btn-block">{editLabel}</Link> : null}
+            {contrib ? (
+              <div className="suggest-box">
+                {latest ? <Link href={`/proposals/${p.id}/suggest`} className="btn-primary btn-block">{t("view.suggest")}</Link> : null}
+                <span className="hint">{latest ? t("view.suggestHint", { name: p.author.name.split(" ")[0] }) : t("view.suggestAfterPublish")}</span>
+              </div>
+            ) : null}
+            {!mine && !contrib && latest ? <FollowButton proposalId={p.id} following={p.following} /> : null}
           </div>
+          <TeamCard v={team} />
+          {crs && crs.items.length ? (
+            <nav className="card cr-card" aria-label={t("cr.title")}>
+              <div className="row-head"><span className="eyebrow">{t("cr.title")}</span>{crs.openCount ? <span className="sub">{t("cr.open", { n: crs.openCount })}</span> : null}</div>
+              {crs.items.map((c) => (
+                <Link key={c.id} href={`/proposals/${p.id}/changes/${c.id}`} className="cr-item">
+                  <span className={`avatar av-28${c.isMe ? " avatar-me" : ""}`}>{c.initials}</span>
+                  <span className="cr-text">
+                    <span className="cr-note">{c.note}</span>
+                    <span className="cr-meta">{c.meta}</span>
+                    <span className="cr-tags"><span className={`cr-st ${c.tone}`}>{c.status}</span>{c.conflicts ? <span className="cr-st returned">{c.conflicts}</span> : null}</span>
+                  </span>
+                </Link>
+              ))}
+            </nav>
+          ) : null}
           <nav className="card versions-card" aria-label={t("view.versionHistory")}>
             <div className="eyebrow">{t("view.versionHistory")}</div>
             {mine && p.draft && latest ? (
@@ -259,7 +284,7 @@ export default async function ProposalPage({ params, searchParams }: PageProps<"
                 <Link key={v.number} href={query({ v: isLatest ? null : String(v.number) })} className="version-btn" aria-current={shown === v ? "true" : undefined} scroll={false}>
                   <span className="vdot" />
                   <span className="vtext">
-                    <span className="vhead"><b>v{v.number}</b><span className="vdate">{shortDate(v.publishedAt, locale)}</span>{isLatest ? <span className="latest-tag">{t("view.latest")}</span> : null}</span>
+                    <span className="vhead"><b>v{v.number}</b><span className="vdate">{shortDate(v.publishedAt, locale)}{credit(v) ? ` · ${credit(v)}` : ""}</span>{isLatest ? <span className="latest-tag">{t("view.latest")}</span> : null}</span>
                     <span className="vnote">{tx.get(v.note, v.language).text}</span>
                     {changes(v).length ? <span className="vchips">{changes(v).map((c, i) => <span key={i}>{changeLabel(c, t, tn)}</span>)}</span> : null}
                   </span>

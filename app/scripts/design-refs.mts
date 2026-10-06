@@ -4,14 +4,14 @@ import fs from "node:fs";
 import path from "node:path";
 
 const designDir = path.resolve("../design");
-const src = fs.readFileSync(path.join(designDir, "Insight Pitch v8.dc.html"), "utf8");
+const src = fs.readFileSync(path.join(designDir, "Insight Pitch v9.dc.html"), "utf8");
 const outDir = path.resolve("tests/visual/design");
 const tmpDir = path.resolve(".design-tmp");
 fs.mkdirSync(outDir, { recursive: true });
 fs.mkdirSync(tmpDir, { recursive: true });
-for (const f of ["support.js", "image-slot.js"]) fs.copyFileSync(path.join(designDir, f), path.join(tmpDir, f));
+for (const f of ["support.js", "image-slot.js", "ip-data.js", "ip-lib.js", "ip-merge.js", "ip-app.js"]) fs.copyFileSync(path.join(designDir, f), path.join(tmpDir, f));
 
-const screens = ["login", "list", "view", "edit", "settings", "profile"];
+const screens = ["login", "list", "view", "edit", "settings", "profile", "team", "review"];
 const browser = await chromium.launch();
 for (const screen of screens) {
   // The start screen is a prop default stored in the data-props attribute.

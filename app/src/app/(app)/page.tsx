@@ -31,7 +31,7 @@ export default async function ProposalsPage({ searchParams }: PageProps<"/">) {
   const [visible, streams, settings, i18n, followedPeople] = await Promise.all([getVisibleProposals(user), getStreams(), getSettings(), getI18n(), getFollowedPeople(user.id)]);
   const { t, tn, lang } = i18n;
 
-  // Titles, summaries and stream names in the reader's language. Drafts stay as written: only their author sees them.
+  // Titles, summaries and stream names in the reader's language. Drafts stay as written: only their team sees them.
   const tx = await contentTranslator(lang, settings.defaultLanguage, [
     ...visible.filter((p) => p.latest).flatMap((p) => [{ text: p.latest!.title, lang: p.latest!.language }, { text: p.latest!.summary, lang: p.latest!.language }]),
     ...streams.map((s) => ({ text: s.name, lang: settings.defaultLanguage })),
@@ -50,11 +50,12 @@ export default async function ProposalsPage({ searchParams }: PageProps<"/">) {
   const activeStreams = streams.filter((s) => s.active);
   const curStream = streams.find((s) => s.id === one("stream") && s.active) ?? null;
 
-  const mine = visible.filter((p) => p.author.id === user.id);
+  // My proposals: every team the user is on. Drafts: unpublished work they lead.
+  const mine = visible.filter((p) => p.role);
   const lists: Record<Tab, typeof visible> = {
     all: visible,
     mine,
-    drafts: mine.filter((p) => p.draft),
+    drafts: mine.filter((p) => p.role === "lead" && p.draft),
     // Proposals the user follows, and published proposals by people they follow.
     following: visible.filter((p) => p.following || (p.latest && followedPeople.has(p.author.id))),
   };
@@ -122,7 +123,7 @@ export default async function ProposalsPage({ searchParams }: PageProps<"/">) {
         {rows.length > 0 ? (
           <div className="rows">
             {rows.map((p) => (
-              <ProposalRow key={p.id} p={p} shown={shown(p)} isMine={p.author.id === user.id} streams={streams} streamName={streamName} settings={settings} i18n={i18n} />
+              <ProposalRow key={p.id} p={p} shown={shown(p)} isMine={p.role === "lead"} streams={streams} streamName={streamName} settings={settings} i18n={i18n} />
             ))}
           </div>
         ) : (

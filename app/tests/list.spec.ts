@@ -10,14 +10,15 @@ const streamLink = (page: Page, name: string) => page.getByRole("navigation", { 
 
 test("library tabs show counts and filter the list", async ({ page }) => {
   await expect(tab(page, "All proposals")).toContainText("8");
-  await expect(tab(page, "My proposals")).toContainText("2");
+  // Maya leads two proposals and is a member of the hospital team.
+  await expect(tab(page, "My proposals")).toContainText("3");
   await expect(tab(page, "Drafts")).toContainText("2");
   await expect(tab(page, "Following")).toContainText("1");
   await expect(rows(page)).toHaveCount(8);
 
   await tab(page, "My proposals").click();
   await expect(page.getByRole("heading", { level: 1 })).toHaveText("My proposals");
-  await expect(rows(page)).toHaveCount(2);
+  await expect(rows(page)).toHaveCount(3);
   await tab(page, "Following").click();
   await expect(rows(page)).toHaveCount(1);
   await expect(rows(page).first()).toContainText(TITLES.meals);
@@ -26,6 +27,7 @@ test("library tabs show counts and filter the list", async ({ page }) => {
 test("rows show badges, score chips, author, version and comment count", async ({ page }) => {
   const hospital = rows(page).filter({ hasText: TITLES.hospital });
   await expect(hospital).toContainText("Priya Raman");
+  await expect(hospital).toContainText("and 2 others");
   await expect(hospital).toContainText("Updated 2 days ago");
   await expect(hospital).toContainText("v3");
   await expect(hospital.locator(".score-chip")).toHaveText(["Healthcare9", "Finance6", "Transport3"]);

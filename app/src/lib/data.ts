@@ -18,6 +18,7 @@ import {
   users,
 } from "@/db/schema";
 import type { CurrentUser } from "./auth";
+import { membershipsOf, teamSizes } from "./team";
 
 export type Stream = { id: string; name: string; description: string; color: string; active: boolean; position: number; related: string[] };
 
@@ -37,32 +38,44 @@ export async function getStreams(): Promise<Stream[]> {
   }));
 }
 
-export type VersionRow = { number: number; title: string; summary: string; body: string; note: string; language: string | null; publishedAt: Date };
-export type DraftRow = { title: string; summary: string; body: string; savedAt: Date; note: string; noteAuto: boolean; noteFor: string; summaryAuto: boolean; summaryFor: string };
+export type VersionRow = { number: number; title: string; summary: string; body: string; note: string; language: string | null; publishedAt: Date; byId: string | null; withIds: string[] };
+export type DraftRow = { title: string; summary: string; body: string; savedAt: Date; note: string; noteAuto: boolean; noteFor: string; summaryAuto: boolean; summaryFor: string; contributors: string[] };
+/** The viewer's place on the proposal's team. */
+export type TeamRole = "lead" | "member" | null;
 export type ScoreRow = { streamId: string; score: number; authorScore: number | null; jevScore: number | null; jevConfidence: number | null };
 export type Person = { id: string; name: string; initials: string };
 
 export type ProposalSummary = {
   id: string;
+  /** The lead: who edits and publishes, shown as the proposal's name. */
   author: Person;
+  teamSize: number;
+  role: TeamRole;
   updatedAt: Date;
   latest: VersionRow | null;
-  draft: DraftRow | null; // only loaded for the current user's own proposals
+  draft: DraftRow | null; // only for the lead, and for team members while nothing is published
   scores: ScoreRow[];
   commentCount: number;
   following: boolean;
 };
 
-/** Proposals the user can see: every published proposal plus their own drafts. */
+const versionRow = (v: typeof proposalVersions.$inferSelect): VersionRow => ({
+  number: v.number, title: v.title, summary: v.summary, body: v.body, note: v.note, language: v.language, publishedAt: v.publishedAt, byId: v.byId, withIds: v.withIds,
+});
+const draftRow = (d: typeof proposalDrafts.$inferSelect): DraftRow => ({
+  title: d.title, summary: d.summary, body: d.body, savedAt: d.savedAt, note: d.note, noteAuto: d.noteAuto, noteFor: d.noteFor, summaryAuto: d.summaryAuto, summaryFor: d.summaryFor, contributors: d.contributors,
+});
+
+/** Proposals the user can see: every published proposal plus drafts of the teams they're on. */
 export async function getVisibleProposals(user: CurrentUser): Promise<ProposalSummary[]> {
   const base = await db
-    .select({ id: proposals.id, authorId: proposals.authorId, updatedAt: proposals.updatedAt, name: users.name, initials: users.initials })
+    .select({ id: proposals.id, leadId: proposals.leadId, updatedAt: proposals.updatedAt, name: users.name, initials: users.initials })
     .from(proposals)
-    .innerJoin(users, eq(users.id, proposals.authorId));
+    .innerJoin(users, eq(users.id, proposals.leadId));
   if (base.length === 0) return [];
   const ids = base.map((p) => p.id);
 
-  const [versions, drafts, scores, counts, follow] = await Promise.all([
+  const [versions, drafts, scores, counts, follow, mem, sizes] = await Promise.all([
     db.select().from(proposalVersions).where(inArray(proposalVersions.proposalId, ids)),
     db.select().from(proposalDrafts).where(inArray(proposalDrafts.proposalId, ids)),
     db.select().from(proposalStreams).where(inArray(proposalStreams.proposalId, ids)),
@@ -72,21 +85,27 @@ export async function getVisibleProposals(user: CurrentUser): Promise<ProposalSu
       .where(and(inArray(comments.proposalId, ids), inArray(comments.status, ["visible", "flagged"])))
       .groupBy(comments.proposalId),
     db.select({ proposalId: follows.proposalId }).from(follows).where(eq(follows.userId, user.id)),
+    membershipsOf(user.id),
+    teamSizes(ids),
   ]);
 
   const out: ProposalSummary[] = [];
   for (const p of base) {
-    const mine = p.authorId === user.id;
+    const role: TeamRole = mem.lead.has(p.id) ? "lead" : mem.member.has(p.id) ? "member" : null;
     const vs = versions.filter((v) => v.proposalId === p.id).sort((a, b) => a.number - b.number);
     const latest = vs.at(-1) ?? null;
-    if (!latest && !mine) continue;
-    const d = mine ? drafts.find((x) => x.proposalId === p.id) : undefined;
+    // Unpublished drafts are visible to the team and to people invited to join it.
+    const invited = mem.invited.has(p.id);
+    if (!latest && !role && !invited) continue;
+    const d = role === "lead" || ((role || invited) && !latest) ? drafts.find((x) => x.proposalId === p.id) : undefined;
     out.push({
       id: p.id,
-      author: { id: p.authorId, name: p.name, initials: p.initials },
+      author: { id: p.leadId, name: p.name, initials: p.initials },
+      teamSize: sizes.get(p.id) ?? 1,
+      role,
       updatedAt: p.updatedAt,
-      latest: latest && { number: latest.number, title: latest.title, summary: latest.summary, body: latest.body, note: latest.note, language: latest.language, publishedAt: latest.publishedAt },
-      draft: d ? { title: d.title, summary: d.summary, body: d.body, savedAt: d.savedAt, note: d.note, noteAuto: d.noteAuto, noteFor: d.noteFor, summaryAuto: d.summaryAuto, summaryFor: d.summaryFor } : null,
+      latest: latest && versionRow(latest),
+      draft: d ? draftRow(d) : null,
       scores: scores.filter((s) => s.proposalId === p.id).map(({ streamId, score, authorScore, jevScore, jevConfidence }) => ({ streamId, score, authorScore, jevScore, jevConfidence })),
       commentCount: counts.find((c) => c.proposalId === p.id)?.n ?? 0,
       following: follow.some((f) => f.proposalId === p.id),
@@ -125,7 +144,9 @@ export type InsightItem = {
 
 export type ProposalDetail = {
   id: string;
+  /** The lead. */
   author: Person;
+  role: TeamRole;
   versions: VersionRow[];
   draft: DraftRow | null;
   scores: ScoreRow[];
@@ -134,23 +155,27 @@ export type ProposalDetail = {
   insights: InsightItem[];
   /** Some insights haven't been judged against the latest version yet. */
   insightsStale: boolean;
+  /** Names of the people credited on versions (who published, and with whom). */
+  names: Record<string, string>;
 };
 
-/** Returns null when the proposal doesn't exist or is someone else's unpublished draft. */
+/** Returns null when the proposal doesn't exist or is an unpublished draft of a team the user isn't on. */
 export async function getProposalDetail(id: string, user: CurrentUser): Promise<ProposalDetail | null> {
   if (!/^[0-9a-f-]{36}$/i.test(id)) return null;
   const [p] = await db
-    .select({ id: proposals.id, authorId: proposals.authorId, name: users.name, initials: users.initials })
+    .select({ id: proposals.id, leadId: proposals.leadId, name: users.name, initials: users.initials })
     .from(proposals)
-    .innerJoin(users, eq(users.id, proposals.authorId))
+    .innerJoin(users, eq(users.id, proposals.leadId))
     .where(eq(proposals.id, id))
     .limit(1);
   if (!p) return null;
-  const mine = p.authorId === user.id;
+  const mem = await membershipsOf(user.id);
+  const role: TeamRole = mem.lead.has(id) ? "lead" : mem.member.has(id) ? "member" : null;
+  const invited = mem.invited.has(id);
 
   const [versions, draftRows, scores, followRows, cmts] = await Promise.all([
     db.select().from(proposalVersions).where(eq(proposalVersions.proposalId, id)).orderBy(asc(proposalVersions.number)),
-    mine ? db.select().from(proposalDrafts).where(eq(proposalDrafts.proposalId, id)) : Promise.resolve([]),
+    role || invited ? db.select().from(proposalDrafts).where(eq(proposalDrafts.proposalId, id)) : Promise.resolve([]),
     db.select().from(proposalStreams).where(eq(proposalStreams.proposalId, id)),
     db.select().from(follows).where(and(eq(follows.proposalId, id), eq(follows.userId, user.id))),
     db
@@ -163,7 +188,7 @@ export async function getProposalDetail(id: string, user: CurrentUser): Promise<
       // Held comments are visible to their author only; removed ones to nobody.
       .where(and(eq(comments.proposalId, id), ne(comments.status, "removed"), or(ne(comments.status, "pending"), eq(comments.authorId, user.id)))),
   ]);
-  if (versions.length === 0 && !mine) return null;
+  if (versions.length === 0 && !role && !invited) return null;
 
   const cids = cmts.map((c) => c.id);
   const [likeRows, myFlags] = cids.length
@@ -221,17 +246,22 @@ export async function getProposalDetail(id: string, user: CurrentUser): Promise<
     }))
     .filter((i) => i.sources.length > 0);
 
-  const d = draftRows[0];
+  const credited = [...new Set(versions.flatMap((v) => [v.byId, ...v.withIds]).filter((x): x is string => Boolean(x)))];
+  const nameRows = credited.length ? await db.select({ id: users.id, name: users.name }).from(users).where(inArray(users.id, credited)) : [];
+  // Members see the draft only while nothing is published; after that the draft is the lead's work in progress.
+  const d = role === "lead" || ((role || invited) && !versions.length) ? draftRows[0] : undefined;
   return {
     id: p.id,
-    author: { id: p.authorId, name: p.name, initials: p.initials },
-    versions: versions.map((v) => ({ number: v.number, title: v.title, summary: v.summary, body: v.body, note: v.note, language: v.language, publishedAt: v.publishedAt })),
-    draft: d ? { title: d.title, summary: d.summary, body: d.body, savedAt: d.savedAt, note: d.note, noteAuto: d.noteAuto, noteFor: d.noteFor, summaryAuto: d.summaryAuto, summaryFor: d.summaryFor } : null,
+    author: { id: p.leadId, name: p.name, initials: p.initials },
+    role,
+    versions: versions.map(versionRow),
+    draft: d ? draftRow(d) : null,
     scores: scores.map(({ streamId, score, authorScore, jevScore, jevConfidence }) => ({ streamId, score, authorScore, jevScore, jevConfidence })),
     following: followRows.length > 0,
     comments: top,
     insights: insightList,
     insightsStale: insightRows.some((i) => i.relevanceVersion !== versions.at(-1)?.number),
+    names: Object.fromEntries(nameRows.map((r) => [r.id, r.name])),
   };
 }
 

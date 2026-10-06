@@ -7,6 +7,9 @@ export const USERS = {
   maya: { email: "maya.chen@insight.gov", name: "Maya Chen", initials: "MC" },
   priya: { email: "priya.raman@insight.gov", name: "Priya Raman", initials: "PR" },
   lena: { email: "lena.fischer@example.org", name: "Lena Fischer", initials: "LF" },
+  daniel: { email: "daniel.okafor@insight.gov", name: "Daniel Okafor", initials: "DO" },
+  sam: { email: "sam.whitfield@example.org", name: "Sam Whitfield", initials: "SW" },
+  ava: { email: "ava.moreau@example.org", name: "Ava Moreau", initials: "AM" },
 } as const;
 export const PASSWORD = "insight2026";
 
@@ -17,6 +20,8 @@ export const TITLES = {
   legal: "Free legal aid clinics at every district court",
   telemedicine: "Telemedicine kiosks for rural health centres",
   bus: "Electric bus pilot on two city routes",
+  heritage: "Heritage trail and visitor centre for the old town",
+  registry: "Digital land registry to reduce property disputes",
 };
 
 /** Restores the test database to the design's seed data. */

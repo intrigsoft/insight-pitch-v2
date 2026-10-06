@@ -80,6 +80,22 @@ for (const device of ["desktop", "mobile"] as const) {
       await compare(page, "settings", device);
     });
 
+    test("manage team", async ({ page }) => {
+      await login(page);
+      await openProposal(page, TITLES.legal);
+      await page.getByRole("button", { name: /Manage team/ }).click();
+      await expect(page.getByRole("dialog", { name: "Manage team" })).toContainText("2 pending");
+      await compare(page, "team", device);
+    });
+
+    test("change request review", async ({ page }) => {
+      await login(page);
+      await openProposal(page, TITLES.legal);
+      await page.getByRole("navigation", { name: "Change requests" }).getByRole("link", { name: /supervised by a practising lawyer/ }).click();
+      await expect(page.getByText("0 of 1 decided")).toBeVisible();
+      await compare(page, "review", device);
+    });
+
     test("profile", async ({ page }) => {
       await login(page);
       await openProposal(page, TITLES.hospital);

@@ -50,6 +50,7 @@ export function ProposalRow({ p, shown, isMine, streams, streamName, settings, i
           <>
             <span className="avatar av-24">{p.author.initials}</span>
             <Link href={`/people/${p.author.id}`} className="author author-link">{p.author.name}</Link>
+            {p.teamSize > 1 ? <span className="team-more">{tn("list.andOthers", p.teamSize - 1)}</span> : null}
             <span>·</span>
           </>
         ) : null}

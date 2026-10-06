@@ -86,6 +86,19 @@ Source design: claude.ai/design project "Insight Pitch proposal management"
 - [x] Insights tab sorts by relevance by default, with "Most upvoted" as the alternative; answered points stay last
 - [x] Judged when an insight is created, again after each new version, and in the background for older insights when the proposal is opened
 
+### v9: teams and change requests (added 6 Oct)
+
+- [x] Proposals have a lead (edits and publishes) and a team; the author is recorded separately as who started it
+- [x] Team card on the proposal: members, open roles, lead-role offer, invite, ask to join, pending request, leave
+- [x] Manage team drawer: join requests (approve, decline, block), members (offer lead, remove), invites with suggestions from strengths, open roles, who can ask, team size limit, blocked people
+- [x] Ask to join dialog with the request rules (one per proposal, five in total, 30 days after a decline, 20–280 characters)
+- [x] Suggest changes: the editor in change-request mode, submit dialog with an automatic description
+- [x] Change requests card, and the review screen: clean changes accepted or rejected, overlapping ones resolved side by side or with a combined version, merged into the lead's draft
+- [x] Send back, update and resubmit, close, withdraw
+- [x] Versions credit the members whose changes they include ("Maya Chen with Daniel")
+- [x] Lists show the lead "and N others"; My proposals covers every team you're on; drafts are visible to the team and invitees
+- [x] Migration with sample teams for existing environments; seed and e2e tests (team.spec.ts), visual checks for the drawer and review screen
+
 ## Decisions
 
 - **Jev is the reviewer.** The design captions scores "Extracted from the proposal by Jev". Publishing sends the
@@ -193,6 +206,11 @@ Source design: claude.ai/design project "Insight Pitch proposal management"
 - **Text only** is remembered in a cookie, so the server doesn't send images to readers who turned them off.
 
 - **Insight relevance.** One Jev call per proposal scores all its insights that haven't been judged against the latest version (five levels, from "unrelated" to "central: cost, feasibility, who it serves or its main risk"), using the probability-weighted level so close calls still order sensibly. Relevance is about the proposal as it now stands, so publishing a new version queues a fresh judgement. Ties sort by votes. `npm run insights:relevance [-- --all]` scores everything in one go.
+
+- **Teams (v9).** Merging puts accepted changes into the lead's draft; nothing goes live until the lead publishes, and the version then credits the contributors. Only the lead edits the draft and publishes; other members suggest changes through change requests. Invites, requests and lead-role offers show on the proposal page only (with the request count on Manage team); there's no email. Once a proposal is published, members see the published version, not the lead's draft in progress, so a member reviewing a request sees it against the latest version.
+- **Merging.** Proposals are compared paragraph by paragraph (title and summary count as paragraphs) against the version the request was based on. Paragraphs only the request changed merge cleanly; paragraphs both the request and the lead's draft changed are conflicts. The lead's choices are applied on the server against the same draft they reviewed; if the draft changed in the meantime, the merge is refused and they reload.
+- **Strengths on join requests and suggestions** respect each person's "show my strengths" setting: the lead sees the strength of people who share theirs, and the ask dialog always shows the asker their own.
+- **Invited people can see the draft** they're invited to (the drawer says so), and it appears in their list.
 
 ## Status summary
 
