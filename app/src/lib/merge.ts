@@ -59,10 +59,40 @@ export type Chunk = {
   idx?: number;
 };
 
+const eq = (x: string[], y: string[]) => x.length === y.length && x.every((v, i) => v === y[i]);
+const kindOf = (b: string[], o: string[], t: string[]): Chunk["kind"] =>
+  eq(o, b) && eq(t, b) ? "same" : eq(o, b) ? "theirs" : eq(t, b) || eq(o, t) ? "ours" : "conflict";
+
+const metaOf = (x: string) => (x.startsWith("@@title ") ? "t" : x.startsWith("@@summary ") ? "s" : "");
+/** The block in `arr` from `from` on that is an edited version of `x`, or -1. */
+function similarIn(x: string, arr: string[], from: number) {
+  for (let q = from; q < arr.length; q++) if (metaOf(arr[q]) === metaOf(x) && similarity(x, arr[q]) >= 0.4) return q;
+  return -1;
+}
+
+/**
+ * Splits a changed run around base paragraphs that both sides edited, so that paragraphs only one side added
+ * next to them aren't swept into the conflict (and lost if the lead picks the other version).
+ */
+function refine(b: string[], o: string[], t: string[]): Chunk[] {
+  const kind = kindOf(b, o, t);
+  if (kind !== "conflict" || !b.length) return [{ kind, base: b, ours: o, theirs: t }];
+  for (let i = 0; i < b.length; i++) {
+    const oj = similarIn(b[i], o, 0), tj = similarIn(b[i], t, 0);
+    if (oj < 0 || tj < 0) continue;
+    const parts = [
+      ...refine(b.slice(0, i), o.slice(0, oj), t.slice(0, tj)),
+      { kind: kindOf([b[i]], [o[oj]], [t[tj]]), base: [b[i]], ours: [o[oj]], theirs: [t[tj]] },
+      ...refine(b.slice(i + 1), o.slice(oj + 1), t.slice(tj + 1)),
+    ];
+    return parts.filter((c) => c.base.length || c.ours.length || c.theirs.length);
+  }
+  return [{ kind, base: b, ours: o, theirs: t }];
+}
+
 export function merge3(B: string[], O: string[], T: string[]): Chunk[] {
   const mo = lcsMap(B, O), mt = lcsMap(B, T);
   const out: Chunk[] = [];
-  const eq = (x: string[], y: string[]) => x.length === y.length && x.every((v, i) => v === y[i]);
   let bi = 0, oi = 0, ti = 0;
   for (let i = 0; i <= B.length; i++) {
     const end = i === B.length;
@@ -70,10 +100,7 @@ export function merge3(B: string[], O: string[], T: string[]): Chunk[] {
     if (!end && !(mo[i] >= 0 && mt[i] >= 0)) continue;
     const oj = end ? O.length : mo[i], tj = end ? T.length : mt[i];
     const b = B.slice(bi, i), o = O.slice(oi, oj), t = T.slice(ti, tj);
-    if (b.length || o.length || t.length) {
-      const kind = eq(o, b) && eq(t, b) ? "same" : eq(o, b) ? "theirs" : eq(t, b) || eq(o, t) ? "ours" : "conflict";
-      out.push({ kind, base: b, ours: o, theirs: t });
-    }
+    if (b.length || o.length || t.length) out.push(...refine(b, o, t));
     if (!end) out.push({ kind: "same", base: [B[i]], ours: [O[oj]], theirs: [T[tj]] });
     bi = i + 1; oi = oj + 1; ti = tj + 1;
   }
