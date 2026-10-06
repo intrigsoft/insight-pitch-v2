@@ -31,6 +31,8 @@ export const users = pgTable("users", {
   // Languages the person reads, shown on their profile.
   reads: jsonb("reads").$type<string[]>().notNull().default(["en"]),
   strengthsPublic: boolean("strengths_public").notNull().default(false),
+  // Sample voters: accounts that only cast votes in the sample data. They can't sign in and aren't offered in people pickers.
+  voterOnly: boolean("voter_only").notNull().default(false),
   passwordHash: text("password_hash").notNull(),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
@@ -83,6 +85,8 @@ export const proposals = pgTable("proposals", {
   offerTo: uuid("offer_to").references(() => users.id, { onDelete: "set null" }),
   offerNote: text("offer_note").notNull().default(""),
   offerAt: timestamp("offer_at", { withTimezone: true }),
+  // Votes needed before the share of support is shown publicly (a lead setting).
+  voteMin: integer("vote_min").notNull().default(30),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 });
@@ -456,4 +460,24 @@ export const changeRequests = pgTable(
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [index("change_requests_proposal").on(t.proposalId)],
+);
+
+// Support or opposition for a published proposal: one vote per person, which they can change or withdraw.
+// People who oppose can say what would need to change for them to support it; only the lead reads that.
+export const proposalVotes = pgTable(
+  "proposal_votes",
+  {
+    proposalId: uuid("proposal_id")
+      .notNull()
+      .references(() => proposals.id, { onDelete: "cascade" }),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    stance: text("stance", { enum: ["support", "oppose"] }).notNull(),
+    reason: text("reason").notNull().default(""),
+    reasonAt: timestamp("reason_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [primaryKey({ columns: [t.proposalId, t.userId] })],
 );

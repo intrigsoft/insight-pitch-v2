@@ -19,6 +19,7 @@ import {
 } from "@/db/schema";
 import type { CurrentUser } from "./auth";
 import { membershipsOf, teamSizes } from "./team";
+import { voteCounts } from "./votes";
 
 export type Stream = { id: string; name: string; description: string; color: string; active: boolean; position: number; related: string[] };
 
@@ -57,6 +58,7 @@ export type ProposalSummary = {
   scores: ScoreRow[];
   commentCount: number;
   following: boolean;
+  votes: { support: number; oppose: number; min: number };
 };
 
 const versionRow = (v: typeof proposalVersions.$inferSelect): VersionRow => ({
@@ -69,13 +71,13 @@ const draftRow = (d: typeof proposalDrafts.$inferSelect): DraftRow => ({
 /** Proposals the user can see: every published proposal plus drafts of the teams they're on. */
 export async function getVisibleProposals(user: CurrentUser): Promise<ProposalSummary[]> {
   const base = await db
-    .select({ id: proposals.id, leadId: proposals.leadId, updatedAt: proposals.updatedAt, name: users.name, initials: users.initials })
+    .select({ id: proposals.id, leadId: proposals.leadId, updatedAt: proposals.updatedAt, voteMin: proposals.voteMin, name: users.name, initials: users.initials })
     .from(proposals)
     .innerJoin(users, eq(users.id, proposals.leadId));
   if (base.length === 0) return [];
   const ids = base.map((p) => p.id);
 
-  const [versions, drafts, scores, counts, follow, mem, sizes] = await Promise.all([
+  const [versions, drafts, scores, counts, follow, mem, sizes, votes] = await Promise.all([
     db.select().from(proposalVersions).where(inArray(proposalVersions.proposalId, ids)),
     db.select().from(proposalDrafts).where(inArray(proposalDrafts.proposalId, ids)),
     db.select().from(proposalStreams).where(inArray(proposalStreams.proposalId, ids)),
@@ -87,6 +89,7 @@ export async function getVisibleProposals(user: CurrentUser): Promise<ProposalSu
     db.select({ proposalId: follows.proposalId }).from(follows).where(eq(follows.userId, user.id)),
     membershipsOf(user.id),
     teamSizes(ids),
+    voteCounts(ids, user.id),
   ]);
 
   const out: ProposalSummary[] = [];
@@ -109,6 +112,7 @@ export async function getVisibleProposals(user: CurrentUser): Promise<ProposalSu
       scores: scores.filter((s) => s.proposalId === p.id).map(({ streamId, score, authorScore, jevScore, jevConfidence }) => ({ streamId, score, authorScore, jevScore, jevConfidence })),
       commentCount: counts.find((c) => c.proposalId === p.id)?.n ?? 0,
       following: follow.some((f) => f.proposalId === p.id),
+      votes: { support: votes.get(p.id)?.support ?? 0, oppose: votes.get(p.id)?.oppose ?? 0, min: p.voteMin },
     });
   }
   return out;
@@ -157,13 +161,15 @@ export type ProposalDetail = {
   insightsStale: boolean;
   /** Names of the people credited on versions (who published, and with whom). */
   names: Record<string, string>;
+  /** Votes needed before the share of support is shown (a lead setting). */
+  voteMin: number;
 };
 
 /** Returns null when the proposal doesn't exist or is an unpublished draft of a team the user isn't on. */
 export async function getProposalDetail(id: string, user: CurrentUser): Promise<ProposalDetail | null> {
   if (!/^[0-9a-f-]{36}$/i.test(id)) return null;
   const [p] = await db
-    .select({ id: proposals.id, leadId: proposals.leadId, name: users.name, initials: users.initials })
+    .select({ id: proposals.id, leadId: proposals.leadId, voteMin: proposals.voteMin, name: users.name, initials: users.initials })
     .from(proposals)
     .innerJoin(users, eq(users.id, proposals.leadId))
     .where(eq(proposals.id, id))
@@ -262,6 +268,7 @@ export async function getProposalDetail(id: string, user: CurrentUser): Promise<
     insights: insightList,
     insightsStale: insightRows.some((i) => i.relevanceVersion !== versions.at(-1)?.number),
     names: Object.fromEntries(nameRows.map((r) => [r.id, r.name])),
+    voteMin: p.voteMin,
   };
 }
 

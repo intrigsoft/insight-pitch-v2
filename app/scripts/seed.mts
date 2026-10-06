@@ -4,7 +4,7 @@ import bcrypt from "bcryptjs";
 import { drizzle } from "drizzle-orm/postgres-js";
 import postgres from "postgres";
 import * as s from "../src/db/schema";
-import { CHANGE_REQUESTS, COMMENT_ANALYSIS, TEAMS, DEFAULT_SETTINGS, UPLOADS, INSIGHTS, PEOPLE, PROPOSALS, SEED_LANGUAGES, SEED_PASSWORD, STREAMS, ageToMs } from "../src/db/seed-data";
+import { SAMPLE_VOTERS, VOTE_REASONS, sampleVotes, CHANGE_REQUESTS, COMMENT_ANALYSIS, TEAMS, DEFAULT_SETTINGS, UPLOADS, INSIGHTS, PEOPLE, PROPOSALS, SEED_LANGUAGES, SEED_PASSWORD, STREAMS, ageToMs } from "../src/db/seed-data";
 import { catalogEntry } from "../src/lib/languages";
 
 const sql = postgres(process.env.DATABASE_URL!, { max: 1, onnotice: () => {} });
@@ -13,7 +13,7 @@ const now = Date.now();
 const ago = (age: string) => new Date(now - ageToMs(age));
 
 await sql`truncate users, sessions, user_follows, streams, stream_links, proposals, proposal_versions, proposal_drafts, uploads,
-  proposal_streams, follows, comments, team_members, team_roles, team_requests, team_invites, team_blocks, change_requests, comment_likes, comment_flags, insights, insight_sources, insight_votes,
+  proposal_streams, follows, comments, team_members, team_roles, team_requests, team_invites, team_blocks, change_requests, proposal_votes, comment_likes, comment_flags, insights, insight_sources, insight_votes,
   settings, languages, translations restart identity cascade`;
 
 await db.insert(s.languages).values(SEED_LANGUAGES.map((code, i) => {
@@ -36,6 +36,10 @@ const userRows = await db
   )
   .returning({ id: s.users.id, email: s.users.email });
 const uid = Object.fromEntries(PEOPLE.map((p) => [p.key, userRows.find((u) => u.email === p.email)!.id]));
+// Sample citizens who only vote. Their password hash matches no password, and voter-only accounts can't sign in anyway.
+const voterIds = (
+  await db.insert(s.users).values(SAMPLE_VOTERS.map((v) => ({ ...v, role: "citizen" as const, voterOnly: true, passwordHash: "!", createdAt: new Date("2025-08-01") }))).returning({ id: s.users.id, email: s.users.email })
+).sort((a, b) => a.email.localeCompare(b.email)).map((r) => r.id);
 
 await db.insert(s.streams).values(STREAMS.map((st, i) => ({ id: st.id, name: st.name, description: st.desc, color: st.color, active: st.active, position: i })));
 const pairs = new Set<string>();
@@ -79,6 +83,17 @@ for (const p of PROPOSALS) {
     const base = p.versions.find((v) => v.n === cr.base)!;
     await db.insert(s.changeRequests).values({ proposalId: row.id, authorId: uid[cr.author], baseVersion: cr.base, title: base.title, summary: base.summary, body: cr.body, note: cr.note, createdAt: ago(cr.age), updatedAt: ago(cr.age) });
   }
+  if (p.versions.length) {
+    const votes = sampleVotes(p.key, ageToMs(p.versions[0].age) / 86_400_000);
+    const reasons = VOTE_REASONS.filter(([k]) => k === p.key);
+    const opposed = votes.filter(([, stance]) => stance === "oppose");
+    if (votes.length)
+      await db.insert(s.proposalVotes).values(votes.map(([i, stance, minutes]) => {
+        const r = stance === "oppose" ? reasons[opposed.findIndex((o) => o[0] === i)] : undefined;
+        const at = new Date(now - minutes * 60_000);
+        return { proposalId: row.id, userId: voterIds[i], stance, createdAt: at, updatedAt: at, ...(r ? { reason: r[1], reasonAt: ago(r[2]) } : {}) };
+      }));
+  }
   if (p.draft) await db.insert(s.proposalDrafts).values({ proposalId: row.id, title: p.draft.title, summary: p.draft.summary, body: p.draft.body, savedAt: ago(p.draft.saved) });
   await db.insert(s.proposalStreams).values(Object.entries(p.scores).map(([streamId, score]) => ({ proposalId: row.id, streamId, score, authorScore: score })));
   if (p.following) await db.insert(s.follows).values({ userId: uid.maya, proposalId: row.id });
@@ -105,4 +120,4 @@ for (const p of PROPOSALS) {
 }
 
 await sql.end();
-console.log(`Seeded ${PEOPLE.length} people, ${STREAMS.length} streams, ${PROPOSALS.length} proposals`);
+console.log(`Seeded ${PEOPLE.length} people, ${SAMPLE_VOTERS.length} sample voters, ${STREAMS.length} streams, ${PROPOSALS.length} proposals`);

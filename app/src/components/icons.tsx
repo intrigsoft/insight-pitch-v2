@@ -32,3 +32,9 @@ export const LogoMark = ({ size = 28, light = false }: { size?: number; light?: 
     </svg>
   );
 };
+export const CheckIcon = ({ size = 15, width = 2.4 }: { size?: number; width?: number }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={width} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="m5 12 5 5 9-10" /></svg>
+);
+export const CrossIcon = ({ size = 14 }: { size?: number }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.4} strokeLinecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18" /></svg>
+);

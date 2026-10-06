@@ -226,6 +226,9 @@ export const DEFAULT_SETTINGS = {
   txComments: true,
   txLabel: true,
   glossary: ["Insight Pitch", "Jev"] as string[],
+  // A proposal has a public mandate once at least this share of at least this many voters support it.
+  mandatePct: 60,
+  mandateVotes: 200,
 };
 
 // Languages switched on in the seed: English (the default) plus Sinhala and Tamil.
@@ -270,3 +273,61 @@ export const CHANGE_REQUESTS: { proposal: string; author: PersonKey; base: numbe
   { proposal: "p5", author: "sam", base: 1, body: P5sam, note: "Law students to be supervised by a practising lawyer", age: "20h" },
   { proposal: "p1", author: "maya", base: 3, body: P1maya, note: "Named who maintains the access road after construction", age: "1d" },
 ];
+
+/* Votes, from the v10 design: supporters, opponents, and the share of support at earlier points in time. */
+export const VOTES: Record<string, { s: number; o: number; t: number[] }> = {
+  p1: { s: 189, o: 42, t: [61, 68, 72, 76, 79, 81] },
+  p2: { s: 96, o: 58, t: [55, 59, 61] },
+  p3: { s: 112, o: 61, t: [70, 67] },
+  p8: { s: 41, o: 37, t: [58] },
+  p5: { s: 14, o: 4, t: [] },
+  p4: { s: 52, o: 68, t: [51, 47, 45, 44, 43] },
+  p7: { s: 233, o: 71, t: [69, 72, 74, 75, 76, 77] },
+};
+
+/** What some people who oppose said would need to change, for the lead to read: [proposal, text, age]. */
+export const VOTE_REASONS: [string, string, Age][] = [
+  ["p5", "Start with a few courts and publish the results before committing to every district.", "3d"],
+  ["p5", "Say how the volunteer lawyers would be recruited and kept. Two days a week is a lot to ask.", "1d"],
+];
+
+const FIRST = ["Amal", "Nadia", "Ruwan", "Fatima", "Kasun", "Ishara", "Tharindu", "Leila", "Omar", "Dilani", "Chen", "Ana", "Pradeep", "Hiroshi", "Grace", "Samir", "Elena", "Kavya", "Malik", "Sofia"];
+const LAST = ["Perera", "Silva", "Fernando", "Haddad", "Wijesinghe", "Nair", "Costa", "Bandara", "Rahman", "Jayasuriya", "Ito", "Dias", "Mendis", "Kim", "Gunawardena"];
+
+/** Sample citizens who only vote: enough for the largest tally. They can't sign in. */
+export const SAMPLE_VOTERS = Array.from({ length: 320 }, (_, i) => {
+  const first = FIRST[i % FIRST.length], last = LAST[Math.floor(i / FIRST.length) % LAST.length];
+  return { email: `voter${String(i + 1).padStart(3, "0")}@voters.insight.example`, name: `${first} ${last}`, initials: first[0] + last[0] };
+});
+
+/**
+ * The seeded votes on a proposal, spread from its first version to now so that the share of support follows the
+ * design's trend: [voter index, stance, minutes ago].
+ */
+export function sampleVotes(key: string, firstDays: number): [number, "support" | "oppose", number][] {
+  const v = VOTES[key];
+  if (!v) return [];
+  const N = v.s + v.o, B = v.t.length + 1;
+  const offset = (key.charCodeAt(1) * 37) % SAMPLE_VOTERS.length;
+  const span = firstDays * 1440 - 60;
+  const out: [number, "support" | "oppose", number][] = [];
+  let s0 = 0, o0 = 0;
+  for (let b = 0; b < B; b++) {
+    let s1 = v.s, o1 = v.o;
+    if (b < v.t.length) {
+      const n = Math.round((N * (b + 1)) / B);
+      s1 = Math.min(v.s, Math.max(s0, Math.round((n * v.t[b]) / 100)));
+      o1 = Math.min(v.o, Math.max(o0, n - s1));
+    }
+    const fresh = [...Array(s1 - s0).fill("support"), ...Array(o1 - o0).fill("oppose")] as ("support" | "oppose")[];
+    // Interleave supporters and opponents within the period.
+    fresh.sort((a, c) => (a === c ? 0 : a === "support" ? -1 : 1));
+    const mixed = fresh.map((x, i) => [x, (i * 7919) % (fresh.length || 1)] as const).sort((a, c) => a[1] - c[1]).map((x) => x[0]);
+    mixed.forEach((stance, i) => {
+      const at = span * (1 - (b + (i + 1) / (mixed.length + 1)) / B);
+      out.push([(offset + out.length) % SAMPLE_VOTERS.length, stance, Math.max(30, Math.round(at))]);
+    });
+    s0 = s1; o0 = o1;
+  }
+  return out;
+}

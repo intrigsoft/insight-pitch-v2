@@ -4,8 +4,9 @@ import type { AppSettings } from "@/lib/settings";
 import { formatScore } from "@/lib/scale";
 import { sortedScores } from "@/lib/proposal-view";
 import { timeAgo } from "@/lib/format";
+import { tally } from "@/lib/vote-tally";
 import type { getI18n } from "@/i18n/server";
-import { CommentIcon } from "./icons";
+import { CheckIcon, CommentIcon } from "./icons";
 import { Globe } from "./LanguageMenu";
 
 type I18n = Awaited<ReturnType<typeof getI18n>>;
@@ -24,6 +25,8 @@ export function ProposalRow({ p, shown, isMine, streams, streamName, settings, i
   const { t, tn } = i18n;
   const isDraft = !p.latest;
   const hasPending = Boolean(p.latest && p.draft && isMine);
+  const vt = p.latest ? tally(p.votes.support, p.votes.oppose, p.votes.min, { pct: settings.mandatePct, votes: settings.mandateVotes }) : null;
+  const voteCount = vt ? tn("md.votes", vt.total) : "";
   return (
     <div className="row">
       {isDraft || hasPending ? (
@@ -57,6 +60,14 @@ export function ProposalRow({ p, shown, isMine, streams, streamName, settings, i
         <span>{t("list.updated", { when: timeAgo(p.updatedAt, i18n) })}</span>
         <span>·</span><span>{p.latest ? `v${p.latest.number}` : t("list.notPublished")}</span>
         {shown.translated && settings.txLabel ? (<><span>·</span><span className="tx-tag"><Globe size={13} />{t("list.translated")}</span></>) : null}
+        <span className="row-spacer" />
+        {vt?.mandate ? <span className="mandate-pill"><CheckIcon size={12} width={2.6} />{t("md.mandate")}</span> : null}
+        {vt?.shown ? (
+          <span className="row-support" title={t("md.shareTitle")}>
+            <span className="support-bar"><span style={{ width: `${vt.pct}%` }} /></span>
+            <span>{t("md.rowSupport", { pct: `${vt.pct}%`, votes: voteCount }).split(`${vt.pct}%`).flatMap((x, i) => (i ? [<b key={i}>{vt.pct}%</b>, x] : [x]))}</span>
+          </span>
+        ) : vt ? <span>{voteCount}</span> : null}
         <span className="comment-count" aria-label={tn("list.comments", p.commentCount)}><CommentIcon />{p.commentCount}</span>
       </div>
     </div>

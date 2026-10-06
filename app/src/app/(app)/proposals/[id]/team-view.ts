@@ -85,7 +85,7 @@ export async function buildTeamView(p: ProposalDetail, user: CurrentUser, stream
   async function buildDrawer() {
     const taken = (id: string) =>
       team.members.some((m) => m.id === id) || team.invites.some((i) => i.id === id) || team.requests.some((r) => r.id === id) || team.blocked.some((b) => b.id === id);
-    const everyone = await db.select({ id: users.id, name: users.name, role: users.role }).from(users).orderBy(users.name);
+    const everyone = await db.select({ id: users.id, name: users.name, role: users.role }).from(users).where(eq(users.voterOnly, false)).orderBy(users.name);
     const candidates = everyone.filter((u) => !taken(u.id));
     // Strengths of people who asked, and of people who could fill an open role. Private strengths aren't shown.
     const levels = await strengthLevels([...team.requests.map((r) => r.id), ...candidates.map((c) => c.id)], { publicOnly: true });

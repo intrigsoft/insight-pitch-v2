@@ -9,7 +9,7 @@ import { comments, insightSources, proposalStreams, settings, streamLinks, strea
 import { addToInsights } from "@/lib/discussion";
 import { languages, translations } from "@/db/schema";
 import { catalogEntry } from "@/lib/languages";
-import { getSettings } from "@/lib/settings";
+import { getSettings, MANDATE_PCT, MANDATE_VOTES, validMandate } from "@/lib/settings";
 import { getI18n } from "@/i18n/server";
 
 const tr = async () => (await getI18n()).t;
@@ -87,9 +87,11 @@ const VALID: Record<string, (v: unknown) => boolean> = {
   txOnPublish: (v) => typeof v === "boolean",
   txComments: (v) => typeof v === "boolean",
   txLabel: (v) => typeof v === "boolean",
+  mandatePct: (v) => validMandate(v, MANDATE_PCT),
+  mandateVotes: (v) => validMandate(v, MANDATE_VOTES),
 };
 
-export async function updateSetting(key: string, value: string | boolean): Promise<Result> {
+export async function updateSetting(key: string, value: string | boolean | number): Promise<Result> {
   await requireAdmin();
   if (!VALID[key]?.(value)) return { ok: false, error: (await tr())("set.errSetting") };
   await db.insert(settings).values({ key, value }).onConflictDoUpdate({ target: settings.key, set: { value } });

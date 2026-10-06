@@ -25,6 +25,9 @@ import { ProposalLangMenu } from "./ProposalLangMenu";
 import { TranslationBanner, type BannerProps } from "./TranslationBanner";
 import { TeamCard } from "./Team";
 import { buildChangeRequests, buildTeamView } from "./team-view";
+import { MandateCard, type MandateView } from "./Mandate";
+import { opposeReasons, REASON_MAX, supportTrend, tally, VOTE_MIN_OPTIONS, voteCounts } from "@/lib/votes";
+import { timeAgo } from "@/lib/format";
 
 export async function generateMetadata({ params }: PageProps<"/proposals/[id]">) {
   const user = await requireUser();
@@ -81,7 +84,29 @@ export default async function ProposalPage({ params, searchParams }: PageProps<"
       (p.versions.length > 1 ? " · " + t("view.metaFirst", { date: shortDate(p.versions[0].publishedAt, locale) }) : "")
     : t("view.metaDraft", { when: savedAgo(p.draft!.savedAt, i18n) });
   const editLabel = p.draft ? t("view.continueDraft") : latest ? t("view.editNewVersion") : t("view.editDraft");
-  const [team, crs] = await Promise.all([buildTeamView(p, user, streams, settings.scale, i18n, streamName), buildChangeRequests(p, user, i18n)]);
+  const [team, crs, mandate] = await Promise.all([buildTeamView(p, user, streams, settings.scale, i18n, streamName), buildChangeRequests(p, user, i18n), buildMandate()]);
+
+  // Votes open once the proposal is published.
+  async function buildMandate(): Promise<MandateView | null> {
+    if (!latest) return null;
+    const rule = { pct: settings.mandatePct, votes: settings.mandateVotes };
+    const [counts, trend, reasons] = await Promise.all([voteCounts([p!.id], user.id), supportTrend(p!.id, p!.versions[0].publishedAt), mine ? opposeReasons(p!.id) : null]);
+    const c = counts.get(p!.id)!;
+    return {
+      proposalId: p!.id,
+      tally: tally(c.support, c.oppose, p!.voteMin, rule),
+      mine: c.mine,
+      min: p!.voteMin,
+      rule,
+      trend,
+      trendFrom: shortDate(p!.versions[0].publishedAt, locale),
+      isLead: mine,
+      // Keep a minimum set some other way selectable alongside the standard choices.
+      minOptions: [...new Set([...VOTE_MIN_OPTIONS, p!.voteMin])].sort((a, b) => a - b),
+      reasons: reasons && reasons.map((r) => ({ text: r.text, when: timeAgo(r.at, i18n) })),
+      reasonMax: REASON_MAX,
+    };
+  }
   const participants = [...team.members.map((m) => m.name.replace(/ \(.*\)$/, "")), ...p.comments.flatMap((c) => [c.author.name, ...c.replies.map((r) => r.author.name)])];
 
   // Translation banner, worked out here and rendered by a client component that also handles failure and retry.
@@ -237,6 +262,7 @@ export default async function ProposalPage({ params, searchParams }: PageProps<"
         </article>
 
         <aside className="view-aside">
+          {mandate ? <MandateCard v={mandate} /> : null}
           <div className="card">
             <div className="status-head">
               <span className="eyebrow">{t("view.status")}</span>

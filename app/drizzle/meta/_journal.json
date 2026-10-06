@@ -85,6 +85,20 @@
       "when": 1791257229837,
       "tag": "0011_sample_teams",
       "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1791274131792,
+      "tag": "0012_mandate",
+      "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1791274675639,
+      "tag": "0013_sample_votes",
+      "breakpoints": true
     }
   ]
 }

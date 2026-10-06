@@ -22,7 +22,7 @@ export type CurrentUser = {
 
 export async function verifyLogin(email: string, password: string): Promise<CurrentUser | null> {
   const [u] = await db.select().from(users).where(eq(users.email, email.trim().toLowerCase())).limit(1);
-  if (!u || !(await bcrypt.compare(password, u.passwordHash))) return null;
+  if (!u || u.voterOnly || !(await bcrypt.compare(password, u.passwordHash))) return null;
   return { id: u.id, email: u.email, name: u.name, initials: u.initials, role: u.role, language: u.language };
 }
 

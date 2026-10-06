@@ -99,6 +99,16 @@ Source design: claude.ai/design project "Insight Pitch proposal management"
 - [x] Lists show the lead "and N others"; My proposals covers every team you're on; drafts are visible to the team and invitees
 - [x] Migration with sample teams for existing environments; seed and e2e tests (team.spec.ts), visual checks for the drawer and review screen
 
+### v10: public mandate (added 6 Oct)
+
+- [x] Support or oppose a published proposal: one vote per person, changeable and withdrawable
+- [x] Mandate card on the proposal: share of support with the threshold marked, supporters and opponents, status line, support over time
+- [x] Approval hidden until the lead's minimum number of votes (lead setting: 10, 20, 30, 50 or 100; default 30)
+- [x] People who oppose can say what would need to change; the lead reads these in the mandate card
+- [x] List rows show the Mandate badge, the support bar and share, or just the vote count below the minimum
+- [x] Mandate rule (support needed and minimum votes) in admin Settings → Scoring, default 60% from 200 votes
+- [x] Sample voters and votes in the seed and as a migration for existing environments; e2e tests (mandate.spec.ts), visual references from v10
+
 ## Decisions
 
 - **Jev is the reviewer.** The design captions scores "Extracted from the proposal by Jev". Publishing sends the
@@ -210,6 +220,7 @@ Source design: claude.ai/design project "Insight Pitch proposal management"
 - **Teams (v9).** Merging puts accepted changes into the lead's draft; nothing goes live until the lead publishes, and the version then credits the contributors. Only the lead edits the draft and publishes; other members suggest changes through change requests. Invites, requests and lead-role offers show on the proposal page only (with the request count on Manage team); there's no email. Once a proposal is published, members see the published version, not the lead's draft in progress, so a member reviewing a request sees it against the latest version.
 - **Merging.** Proposals are compared paragraph by paragraph (title and summary count as paragraphs) against the version the request was based on. Paragraphs only the request changed merge cleanly; paragraphs both the request and the lead's draft changed are conflicts. The lead's choices are applied on the server against the same draft they reviewed; if the draft changed in the meantime, the merge is refused and they reload.
 - **Strengths on join requests and suggestions** respect each person's "show my strengths" setting: the lead sees the strength of people who share theirs, and the ask dialog always shows the asker their own.
+- **Public mandate (v10).** The mandate rule is an admin setting (Settings → Scoring) rather than fixed. Reasons from people who oppose go to the lead only, in the mandate card, without names, and only while that person still opposes (supporting or withdrawing drops the reason). The trend samples the share of support at seven points from the first version to now, skipping early points with fewer than five votes. The sample data's vote counts come from 320 voter-only accounts that can't sign in and aren't offered in people pickers.
 - **Invited people can see the draft** they're invited to (the drawer says so), and it appears in their list.
 
 ## Status summary
